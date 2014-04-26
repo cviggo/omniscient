@@ -1,0 +1,17 @@
+name: Omniscient
+main: viggo.omniscient.Plugin
+version: 1.6.4-SNAPSHOT
+commands:
+  omni:
+    description: Omniscient
+    usage: |
+      /<command> sync < data | *world <radius> | *allWorlds >
+      /<command> reload - reload config, limits and engines
+      /<command> state - shows state of the database engine
+      /<command> scan <chunk|loaded>- scan for limited but unknown blocks in either current chunk or all loaded chunks
+      /<command> blocks player <player> <blockId:[subValue]> <world> - displays blocks for a player
+      /<command> blocks radius <radius> - displays blocks within a radius
+      /<command> limit <enable|disable>
+      /<command> limit set <hand|blockId:subValue>
+      /<command> stats <enable|disable>
+    permission: omniscient.admin
