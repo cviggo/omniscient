@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -133,15 +134,34 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, r, "limit", "set")) {
+            if (isCommand(args, r, "limit", "set", "hand")) {
+
+                final ItemStack itemInHand = sender.getServer().getPlayer(sender.getName()).getItemInHand();
+
+                if (itemInHand == null) {
+                    sender.sendMessage("you have no item in your hand");
+                    return true;
+                }
+
+                final int blockId = itemInHand.getTypeId();
+                final int subValue = itemInHand.getData().getData();
+                final String blockIdStr = blockId + ":" + subValue;
+
+                final int limit = r.getInt(0);
+                final String blockDisplayName = r.getString(1);
+
+                if (plugin.blockLimits.containsKey(blockIdStr)) {
+
+                    final BlockLimit currentBlockLimit = plugin.blockLimits.remove(blockIdStr);
+                    plugin.databaseEngine.deleteBlockLimit(currentBlockLimit);
+                }
 
 
-//                if (args[2].equals("hand")){
-//
-//                }
-//
-//                plugin.databaseEngine.setBlockLimit()
+                final BlockLimit blockLimit = new BlockLimit(-1, limit, blockId, subValue, blockDisplayName, null, null);
+                plugin.blockLimits.put(blockIdStr, blockLimit);
+                plugin.databaseEngine.setBlockLimit(blockLimit);
             }
+
 
             if (isCommand(args, r, "scan", "loaded")) {
 
@@ -192,7 +212,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                     }
                 }
 
-                sender.sendMessage(String.format("Enqueued %d chunk for scanning", enqueuedChunks));
+                sender.sendMessage(String.format("Enqueued %d chunks for scanning", enqueuedChunks));
                 return true;
             }
 
@@ -229,7 +249,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                     }
                 }
 
-                sender.sendMessage(String.format("Enqueued %d chunk for scanning", enqueuedChunks));
+                sender.sendMessage(String.format("Enqueued %d chunks for scanning", enqueuedChunks));
                 return true;
             }
 

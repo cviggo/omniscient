@@ -24,6 +24,7 @@ public class DatabaseEngine implements Runnable {
     private Connection conn = null;
     private ConcurrentLinkedQueue<UpdateTask<BlockInfo>> blockInfosToUpdate;
     private ConcurrentLinkedQueue<UpdateTask<BlockStat>> blockStatsToUpdate;
+    private ConcurrentLinkedQueue<UpdateTask<BlockLimit>> blockLimitsToUpdate;
     private boolean doExitEngine;
 
     DatabaseEngine(Plugin plugin, String dbHost, int dbPort, String dbCatalog, String dbUser, String dbPassword) {
@@ -36,6 +37,7 @@ public class DatabaseEngine implements Runnable {
         this.dbPassword = dbPassword;
         this.blockInfosToUpdate = new ConcurrentLinkedQueue<UpdateTask<BlockInfo>>();
         this.blockStatsToUpdate = new ConcurrentLinkedQueue<UpdateTask<BlockStat>>();
+        this.blockLimitsToUpdate = new ConcurrentLinkedQueue<UpdateTask<BlockLimit>>();
         this.doExitEngine = false;
     }
 
@@ -72,8 +74,8 @@ public class DatabaseEngine implements Runnable {
                     if (persistConnection()) {
 
                         updateBlockInfos();
-
                         updateBlockStats();
+                        updateBlockLimits();
 
                         _lastRun = new Date();
                     }
@@ -155,6 +157,53 @@ public class DatabaseEngine implements Runnable {
         } catch (Throwable t) {
             plugin.logger.logSevere(t);
             return false;
+        }
+    }
+
+    private void updateBlockLimits() throws SQLException {
+        if (blockLimitsToUpdate.size() > 0) {
+            Statement statement = conn.createStatement();
+
+            while (true) {
+                final UpdateTask<BlockLimit> updateTask = blockLimitsToUpdate.poll();
+
+                if (updateTask == null || updateTask.t == null) {
+                    break;
+                }
+
+                final BlockLimit blockLimit = updateTask.t;
+                String sql;
+
+                switch (updateTask.type) {
+
+                    case Save:
+
+                        sql = String.format(
+                                "INSERT INTO BlockLimit (`limit`, `blockId`, `subValue`, `blockDisplayName`) VALUES ('%d', '%d', %d, %s)",
+                                blockLimit.limit,
+                                blockLimit.blockId,
+                                blockLimit.subValue,
+                                blockLimit.blockDisplayName
+                        );
+
+                        statement.addBatch(sql);
+                        break;
+
+                    case Delete:
+                        sql = String.format(
+                                "DELETE FROM BlockLimit WHERE (`blockId` = '%s' AND `subValue` = %d)",
+                                blockLimit.blockId,
+                                blockLimit.subValue
+                        );
+
+                        statement.addBatch(sql);
+                        break;
+                }
+            }
+
+            int[] results = statement.executeBatch();
+
+            plugin.logger.logInfo(String.format("processed %d block limits", results.length));
         }
     }
 
@@ -266,6 +315,14 @@ public class DatabaseEngine implements Runnable {
 
     public void setBlockStat(BlockStat blockStat) {
         blockStatsToUpdate.add(new UpdateTask<BlockStat>(blockStat, UpdateType.Save));
+    }
+
+    public void setBlockLimit(BlockLimit blockLimit) {
+        blockLimitsToUpdate.add(new UpdateTask<BlockLimit>(blockLimit, UpdateType.Save));
+    }
+
+    public void deleteBlockLimit(BlockLimit blockLimit) {
+        blockLimitsToUpdate.add(new UpdateTask<BlockLimit>(blockLimit, UpdateType.Delete));
     }
 
     public Map<String, BlockLimit> getBlockLimits() {

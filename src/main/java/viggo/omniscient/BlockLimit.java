@@ -18,4 +18,8 @@ public class BlockLimit {
         this.rank = rank;
         this.world = world;
     }
+
+    public String getBlockKey() {
+        return blockId + ":" + subValue;
+    }
 }
