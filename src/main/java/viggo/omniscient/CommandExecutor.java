@@ -32,28 +32,26 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
         return builder.toString();
     }
 
-    private boolean isCommand(String[] args, String baseCommand, String subCommand, int argCountExpected) {
-        int argCountActual = args.length - (baseCommand != null
-                ? (subCommand != null ? 2 : 1)
-                : 0);
+    private boolean isCommand(String[] args, RemainingCommands remainingCommands, String... expectedCommands) {
 
-        if (argCountExpected == argCountActual) {
-            if (baseCommand != null && args.length > 0) {
-                if (!baseCommand.equalsIgnoreCase(args[0])) {
-                    return false;
-                }
-            }
-
-            if (subCommand != null && args.length > 1) {
-                if (!subCommand.equalsIgnoreCase(args[1])) {
-                    return false;
-                }
-            }
-
+        if (expectedCommands == null) {
+            remainingCommands.remainingCommands.addAll(Arrays.asList(args));
             return true;
         }
 
-        return false;
+        for (int i = 0; i < expectedCommands.length && i < args.length; i++) {
+            String actual = args[i];
+            String expected = expectedCommands[i];
+            if (!actual.equals(expected)) {
+                return false;
+            }
+        }
+
+        for (int i = args.length - expectedCommands.length; i < args.length; i++) {
+            remainingCommands.remainingCommands.add(args[i]);
+        }
+
+        return true;
     }
 
     @Override
@@ -65,6 +63,8 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 
         try {
 
+            RemainingCommands r = new RemainingCommands();
+
             String name = cmd.getName();
             if (!name.equals("omni")) {
                 return false;
@@ -74,70 +74,76 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return false;
             }
 
-            if (isCommand(args, "dev", "enable", 0)) {
+            if (isCommand(args, r, "dev", "enable")) {
                 plugin.setDebugPlayer(sender.getServer().getPlayer(sender.getName()), true);
                 sender.sendMessage("dev enabled");
                 return true;
             }
 
-            if (isCommand(args, "dev", "disable", 0)) {
+            if (isCommand(args, r, "dev", "disable")) {
                 plugin.setDebugPlayer(sender.getServer().getPlayer(sender.getName()), false);
                 sender.sendMessage("dev disabled");
                 return true;
             }
 
-            if (isCommand(args, "blocks", "player", 3)) {
-                return blocksPlayer(sender, args);
-            }
+//            if (isCommand(args, r, "blocks", "player", 3)) {
+//                return blocksPlayer(sender, args);
+//            }
+//
+//            if (isCommand(args, r, "blocks", "radius", 1)) {
+//
+//                //plugin.
+//
+//                return blocksRadius(sender, args);
+//            }
 
-            if (isCommand(args, "blocks", "radius", 1)) {
-                return blocksRadius(sender, args);
-            }
-
-            if (isCommand(args, "sync", "world", 1)) {
-                sender.sendMessage("sync world is not implemented yet!");
+            if (isCommand(args, r, "sync", "data")) {
+                final boolean wasSynced = plugin.sync(sender);
+                sender.sendMessage("Omniscient was synced: " + wasSynced);
                 return true;
             }
 
-            if (isCommand(args, "sync", "allWorlds", 0)) {
-                sender.sendMessage("sync all worlds is not implemented yet!");
+            if (isCommand(args, r, "reload")) {
+                boolean wasReloaded = plugin.reload(sender);
+                sender.sendMessage(String.format("Reloaded with success: %s", wasReloaded));
                 return true;
             }
 
-            if (isCommand(args, "sync", "data", 0)) {
-                return sync(sender, args);
-            }
-
-            if (isCommand(args, "reload", null, 0)) {
-                reload(sender, args);
-                return true;
-            }
-
-            if (isCommand(args, "limit", "enable", 0)) {
+            if (isCommand(args, r, "limit", "enable")) {
                 plugin.settings.blockLimitsEnabled = true;
                 sender.sendMessage("limits are now enabled");
                 return true;
             }
 
-            if (isCommand(args, "limit", "disable", 0)) {
+            if (isCommand(args, r, "limit", "disable")) {
                 plugin.settings.blockLimitsEnabled = false;
                 sender.sendMessage("limits are now disabled");
                 return true;
             }
 
-            if (isCommand(args, "stats", "enable", 0)) {
+            if (isCommand(args, r, "stats", "enable")) {
                 plugin.settings.blockStatsEnabled = true;
                 sender.sendMessage("stats are now enabled");
                 return true;
             }
 
-            if (isCommand(args, "stats", "disable", 0)) {
+            if (isCommand(args, r, "stats", "disable")) {
                 plugin.settings.blockStatsEnabled = false;
                 sender.sendMessage("stats are now disabled");
                 return true;
             }
 
-            if (isCommand(args, "scan", "loaded", 0)) {
+            if (isCommand(args, r, "limit", "set")) {
+
+
+//                if (args[2].equals("hand")){
+//
+//                }
+//
+//                plugin.databaseEngine.setBlockLimit()
+            }
+
+            if (isCommand(args, r, "scan", "loaded")) {
 
                 final List<World> worldList = plugin.getServer().getWorlds();
 
@@ -156,7 +162,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, "scan", "chunk", 0)) {
+            if (isCommand(args, r, "scan", "chunk")) {
                 final Location location = plugin.getServer().getPlayerExact(sender.getName()).getLocation();
                 plugin.worldScannerEngine.queueChunkForScanning(location.getChunk(), false, true);
                 sender.sendMessage(String.format("Enqueued current chunk for scanning"));
@@ -164,7 +170,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, "scan", "chunks", 1)) {
+            if (isCommand(args, r, "scan", "chunks")) {
                 final Location location = plugin.getServer().getPlayerExact(sender.getName()).getLocation();
                 final Chunk locationChunk = location.getChunk();
                 int radius = Integer.parseInt(args[2]);
@@ -191,12 +197,12 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             }
 
             // TODO: refactor - is currently mostly a copy of the above, but with chunk loading
-            if (isCommand(args, "scan", "chunks", 2)) {
+            if (isCommand(args, r, "scan", "chunks")) {
                 final Location location = plugin.getServer().getPlayerExact(sender.getName()).getLocation();
                 final Chunk locationChunk = location.getChunk();
-                int radius = Integer.parseInt(args[2]);
+                int radius = r.getInt(0);
 
-                final boolean forceChunkLoading = Boolean.parseBoolean(args[3]);
+                final boolean forceChunkLoading = r.getBoolean(1);
 
                 radius = Math.min(10, radius);
 
@@ -227,21 +233,21 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, "scan", "enable", 0)) {
+            if (isCommand(args, r, "scan", "enable")) {
                 plugin.settings.scanChunksOnLoad = true;
                 plugin.settings.scanChunksPeriodicallyEnabled = true;
                 sender.sendMessage("scan is now enabled (on chunk load and periodically)");
                 return true;
             }
 
-            if (isCommand(args, "scan", "disable", 0)) {
+            if (isCommand(args, r, "scan", "disable")) {
                 plugin.settings.scanChunksOnLoad = false;
                 plugin.settings.scanChunksPeriodicallyEnabled = false;
                 sender.sendMessage("scan is now disabled (on chunk load and periodically)");
                 return true;
             }
 
-            if (isCommand(args, "state", null, 0)) {
+            if (isCommand(args, r, "state")) {
                 sender.sendMessage(
                         String.format("Last processed items %d secs ago.",
                                 (new Date().getTime() - plugin.databaseEngine._lastRun.getTime()) / 1000
@@ -251,7 +257,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, "listWorlds", null, 0)) {
+            if (isCommand(args, r, "listWorlds")) {
                 final List<World> worlds = plugin.getServer().getWorlds();
 
                 final List<String> worldNames = new ArrayList<String>();
@@ -267,7 +273,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, "chunk", "resend", 0)) {
+            if (isCommand(args, r, "chunk", "resend")) {
                 final Location playerLocation = plugin.getServer().getPlayer(sender.getName()).getLocation();
                 playerLocation.getWorld().refreshChunk(playerLocation.getChunk().getX(), playerLocation.getChunk().getZ());
                 return true;
@@ -280,25 +286,23 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
         return false;
     }
 
-    private boolean reload(CommandSender sender, String[] args) {
-        boolean wasReloaded = plugin.reload(sender);
-        sender.sendMessage(String.format("Reloaded with success: %s", wasReloaded));
-        return true;
-    }
+    class RemainingCommands {
+        ArrayList<String> remainingCommands = new ArrayList<String>();
 
-    private boolean sync(CommandSender sender, String[] args) {
-        final boolean wasSynced = plugin.sync(sender);
-        sender.sendMessage("Omniscient was synced: " + wasSynced);
-        return wasSynced;
-    }
+        String getString(int i) {
+            return remainingCommands.get(i);
+        }
 
-    private boolean blocksPlayer(CommandSender sender, String[] args) {
-        sender.sendMessage("WIP");
-        return true;
-    }
+        int getInt(int i) {
+            return Integer.parseInt(remainingCommands.get(i));
+        }
 
-    private boolean blocksRadius(CommandSender sender, String[] args) {
-        sender.sendMessage("WIP");
-        return true;
+        double getDouble(int i) {
+            return Float.parseFloat(remainingCommands.get(i));
+        }
+
+        boolean getBoolean(int i) {
+            return Boolean.parseBoolean(remainingCommands.get(i));
+        }
     }
 }
