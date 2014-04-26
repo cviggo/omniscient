@@ -1,0 +1,4 @@
+omniscient
+==========
+
+omniscient plugin
