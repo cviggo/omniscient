@@ -309,10 +309,6 @@ public class Plugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteractEvent(PlayerInteractEvent event) {
 
-        //logInfo(""+getServer().getWorld("world").getMaxHeight());
-
-        //logger.logInfo("player interacted with a limited block (early)");
-
         try {
             if (event.getPlayer().getItemInHand().getTypeId() != 288) {
                 return;
@@ -332,9 +328,6 @@ public class Plugin extends JavaPlugin implements Listener {
                     clickedBlock.getX(), clickedBlock.getY(), clickedBlock.getZ(), null, null);
 
             String blockKey = getBlockKeyFromInfo(blockInfo);
-
-            // do we have the players name whom placed the block?
-            logger.logInfo("blockKey: " + blockKey);
 
             String owner = null;
             int current = -1;
