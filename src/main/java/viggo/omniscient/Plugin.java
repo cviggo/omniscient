@@ -5,6 +5,8 @@ import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -73,7 +75,7 @@ public class Plugin extends JavaPlugin implements Listener {
         // make sure datafolder is present
         getDataFolder().mkdirs();
 
-        // try load, if fail, shut down server
+        // try load
         if (!reload(null)) {
             logger.logSevere("Failed to load. Please fix the problem (likely shown above).");
         }
@@ -106,6 +108,13 @@ public class Plugin extends JavaPlugin implements Listener {
         try {
 
             if (unknownBlocksFound != null && unknownBlocksFound.size() > 0) {
+
+                if (!settings.autoRemoveUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksWithSignEnabled) {
+                    unknownBlocksFound.clear();
+                    return true;
+                }
+
+
                 if (settings.autoRemoveUnknownBlocksEnabled) {
 
                     while (unknownBlocksFound.size() > 0) {
@@ -118,27 +127,79 @@ public class Plugin extends JavaPlugin implements Listener {
                         getServer().getWorld(blockInfo.world).getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z).setType(Material.AIR);
                     }
 
-                } else {
-                    if (settings.autoReplaceUnknownBlocksEnabled) {
+                    return true;
 
-                        while (unknownBlocksFound.size() > 0) {
-                            final BlockInfo blockInfo = unknownBlocksFound.poll();
+                }
 
-                            if (settings.autoReplaceUnknownBlocksId < 0) {
-                                continue;
-                            }
+                if (settings.autoReplaceUnknownBlocksEnabled) {
 
-                            logger.logWarn(String.format("Replacing block of type: %s @ %s:%d.%d.%d",
-                                            blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
-                            );
+                    while (unknownBlocksFound.size() > 0) {
+                        final BlockInfo blockInfo = unknownBlocksFound.poll();
 
-                            World world = getServer().getWorld(blockInfo.world);
-
-
-                            Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
-
-                            block.setTypeIdAndData(settings.autoReplaceUnknownBlocksId, (byte) settings.autoReplaceUnknownBlocksSubValue, false);
+                        if (settings.autoReplaceUnknownBlocksId < 0) {
+                            continue;
                         }
+
+                        logger.logWarn(String.format("Replacing block of type: %s @ %s:%d.%d.%d",
+                                        blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
+                        );
+
+                        World world = getServer().getWorld(blockInfo.world);
+
+                        Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
+
+                        block.setTypeIdAndData(settings.autoReplaceUnknownBlocksId, (byte) settings.autoReplaceUnknownBlocksSubValue, false);
+                    }
+
+                    return true;
+                }
+
+                if (settings.autoReplaceUnknownBlocksWithSignEnabled) {
+                    while (unknownBlocksFound.size() > 0) {
+                        final BlockInfo blockInfo = unknownBlocksFound.poll();
+
+                        logger.logWarn(String.format("Replacing block of type: %s @ %s:%d.%d.%d with a sign.",
+                                        blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
+                        );
+
+                        World world = getServer().getWorld(blockInfo.world);
+
+                        Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
+
+                        final BlockFace blockFace = block.getFace(block);
+
+                        Block blockBelow = world.getBlockAt(blockInfo.x, Math.max(blockInfo.y - 1, 0), blockInfo.z);
+
+                        if (blockBelow.getType() == Material.AIR) {
+                            block.setTypeIdAndData(settings.autoReplaceUnknownBlocksId, (byte) settings.autoReplaceUnknownBlocksSubValue, false);
+                            continue;
+                        }
+
+
+                        final String blockIdFromBlock = getBlockIdFromBlock(block);
+                        block.setType(Material.AIR);
+                        block.setType(Material.SIGN_POST);
+
+                        Sign sign = (Sign) block.getState();
+
+                        final org.bukkit.material.Sign signData = new org.bukkit.material.Sign(Material.SIGN_POST);
+                        signData.setFacingDirection(blockFace);
+                        sign.setData(signData);
+
+                        sign.setLine(0, blockIdFromBlock);
+                        sign.setLine(1, "was replaced by");
+                        sign.setLine(2, "Omniscient");
+
+                        java.text.SimpleDateFormat sdf =
+                                new java.text.SimpleDateFormat("dd/MM HH:mm:ss");
+
+                        String time = sdf.format(new Date());
+
+                        sign.setLine(3, time);
+
+
+                        sign.update(true, false);
+
                     }
                 }
             }
@@ -315,6 +376,11 @@ public class Plugin extends JavaPlugin implements Listener {
             }
 
             final Block clickedBlock = event.getClickedBlock();
+
+            if (clickedBlock == null) {
+                return;
+            }
+
             final String blockIdFromBlock = getBlockIdFromBlock(clickedBlock);
 
 
