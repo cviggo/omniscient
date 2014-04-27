@@ -179,8 +179,9 @@ public class DatabaseEngine implements Runnable {
                     case Save:
 
                         sql = String.format(
-                                "INSERT INTO BlockLimit (`limit`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, %d, %d, '%s')",
+                                "INSERT INTO BlockLimit (`limit`, `limitGroup`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, %d, %d, %d, '%s')",
                                 blockLimit.limit,
+                                blockLimit.limitGroup,
                                 blockLimit.blockId,
                                 blockLimit.subValue,
                                 blockLimit.blockDisplayName
