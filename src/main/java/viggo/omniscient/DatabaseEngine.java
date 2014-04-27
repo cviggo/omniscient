@@ -172,14 +172,14 @@ public class DatabaseEngine implements Runnable {
                 }
 
                 final BlockLimit blockLimit = updateTask.t;
-                String sql;
+                String sql = null;
 
                 switch (updateTask.type) {
 
                     case Save:
 
                         sql = String.format(
-                                "INSERT INTO BlockLimit (`limit`, `blockId`, `subValue`, `blockDisplayName`) VALUES ('%d', '%d', %d, %s)",
+                                "INSERT INTO BlockLimit (`limit`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, %d, %d, '%s')",
                                 blockLimit.limit,
                                 blockLimit.blockId,
                                 blockLimit.subValue,

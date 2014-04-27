@@ -160,6 +160,8 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 final BlockLimit blockLimit = new BlockLimit(-1, limit, blockId, subValue, blockDisplayName, null, null);
                 plugin.blockLimits.put(blockIdStr, blockLimit);
                 plugin.databaseEngine.setBlockLimit(blockLimit);
+
+                return true;
             }
 
 
@@ -296,6 +298,41 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             if (isCommand(args, r, "chunk", "resend")) {
                 final Location playerLocation = plugin.getServer().getPlayer(sender.getName()).getLocation();
                 playerLocation.getWorld().refreshChunk(playerLocation.getChunk().getX(), playerLocation.getChunk().getZ());
+                return true;
+            }
+
+            if (isCommand(args, r, "blocks", "list")) {
+                for (String item : r.remainingCommands) {
+                    plugin.logger.logInfo(item);
+                }
+
+                final int blockId = r.getInt(0);
+                final int subValue = r.getInt(1);
+                final String blockIdStr = blockId + ":" + subValue;
+
+                final Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(sender.getName());
+
+                if (map == null || !map.containsKey(blockIdStr)) {
+                    sender.sendMessage("No blocks of that type for given player.");
+                    return true;
+                }
+
+                final ArrayList<BlockInfo> blockInfos = map.get(blockIdStr);
+
+                if (blockInfos.size() > 0) {
+                    int cnt = 0;
+                    for (BlockInfo blockInfo : blockInfos) {
+                        sender.sendMessage(String.format("%s: %d.%d.%d", blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z));
+
+                        if (++cnt > 20) {
+                            sender.sendMessage("Reached maximum amount of blocks to list.");
+                            break;
+                        }
+                    }
+                } else {
+                    sender.sendMessage("No blocks of that type for given player.");
+                }
+
                 return true;
             }
 

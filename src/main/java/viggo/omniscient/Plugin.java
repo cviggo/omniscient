@@ -311,29 +311,60 @@ public class Plugin extends JavaPlugin implements Listener {
 
         //logInfo(""+getServer().getWorld("world").getMaxHeight());
 
-        //logInfo("player interacted with a limited block (early)");
-//        try {
-//            final Block clickedBlock = event.getClickedBlock();
-//            final String blockIdFromBlock = getBlockIdFromBlock(clickedBlock);
-//
-//            BlockInfo blockInfo = new BlockInfo(0, blockIdFromBlock, clickedBlock.getWorld().getName(),
-//                    clickedBlock.getX(), clickedBlock.getY(), clickedBlock.getZ(), null, null);
-//
-//            String blockKey = getBlockKeyFromInfo(blockInfo);
-//
-//            // do we have the players name whom placed the block?
-//            logInfo("blockKey: " + blockKey);
-//            boolean isOwnerKnown = playerToBlockCoordsMap.containsKey(blockKey);
-//
-//            event.getPlayer().sendMessage(
-//                    "you interacted with a block: " + blockIdFromBlock
-//                            + ", limited: " + blockLimits.containsKey(blockIdFromBlock)
-//                            + ", owner known: " + isOwnerKnown
-//
-//            );
-//        }catch (Throwable t){
-//            logSevere(t);
-//        }
+        //logger.logInfo("player interacted with a limited block (early)");
+
+        try {
+            if (event.getPlayer().getItemInHand().getTypeId() != 288) {
+                return;
+            }
+
+            final Block clickedBlock = event.getClickedBlock();
+            final String blockIdFromBlock = getBlockIdFromBlock(clickedBlock);
+
+
+            if (!blockLimits.containsKey(blockIdFromBlock)) {
+                return;
+            }
+
+            BlockLimit blockLimit = blockLimits.get(blockIdFromBlock);
+
+            BlockInfo blockInfo = new BlockInfo(0, blockIdFromBlock, clickedBlock.getWorld().getName(),
+                    clickedBlock.getX(), clickedBlock.getY(), clickedBlock.getZ(), null, null);
+
+            String blockKey = getBlockKeyFromInfo(blockInfo);
+
+            // do we have the players name whom placed the block?
+            logger.logInfo("blockKey: " + blockKey);
+
+            String owner = null;
+            int current = -1;
+
+             /* attempt to get information */
+            if (playerToBlockCoordsMap.containsKey(blockKey)) {
+                owner = playerToBlockCoordsMap.get(blockKey);
+
+                final Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(owner);
+
+                if (map.containsKey(blockIdFromBlock)) {
+                    final ArrayList<BlockInfo> blockInfos = map.get(blockIdFromBlock);
+                    current = blockInfos.size();
+                }
+            }
+
+            event.getPlayer().sendMessage(
+                    String.format("%s is owned by: %s. Limit: %s of %d",
+                            blockLimit.blockDisplayName,
+                            owner != null ? owner : "unknown",
+                            current > -1 ? current : "unknown",
+                            blockLimit.limit
+                    )
+            );
+
+            event.setCancelled(true);
+
+        } catch (Throwable t) {
+            logger.logSevere(t);
+        }
 
     }
 
