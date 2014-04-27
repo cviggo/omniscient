@@ -111,6 +111,8 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 if (!settings.autoRemoveUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksWithSignEnabled) {
                     unknownBlocksFound.clear();
+
+                    unknownBlocksProcessingState.set(0);
                     return true;
                 }
 
@@ -127,6 +129,7 @@ public class Plugin extends JavaPlugin implements Listener {
                         getServer().getWorld(blockInfo.world).getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z).setType(Material.AIR);
                     }
 
+                    unknownBlocksProcessingState.set(0);
                     return true;
 
                 }
@@ -151,6 +154,7 @@ public class Plugin extends JavaPlugin implements Listener {
                         block.setTypeIdAndData(settings.autoReplaceUnknownBlocksId, (byte) settings.autoReplaceUnknownBlocksSubValue, false);
                     }
 
+                    unknownBlocksProcessingState.set(0);
                     return true;
                 }
 
