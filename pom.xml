@@ -43,6 +43,16 @@
 
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
+        <resources>
+            <resource>
+                <directory>.</directory>
+                <includes>
+                    <include>config.yml</include>
+                    <include>plugin.yml</include>
+                    <include>README.md</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
