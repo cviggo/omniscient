@@ -148,7 +148,8 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 final String blockIdStr = blockId + ":" + subValue;
 
                 final int limit = r.getInt(0);
-                final String blockDisplayName = r.getString(1);
+                final int limitGroup = r.getInt(1);
+                final String blockDisplayName = r.getString(2);
 
                 if (plugin.blockLimits.containsKey(blockIdStr)) {
 
@@ -157,7 +158,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 }
 
 
-                final BlockLimit blockLimit = new BlockLimit(-1, limit, blockId, subValue, blockDisplayName, null, null);
+                final BlockLimit blockLimit = new BlockLimit(-1, limit, limitGroup, blockId, subValue, blockDisplayName, null, null);
                 plugin.blockLimits.put(blockIdStr, blockLimit);
                 plugin.databaseEngine.setBlockLimit(blockLimit);
 

@@ -343,6 +343,7 @@ public class DatabaseEngine implements Runnable {
                     final BlockLimit blockLimit = new BlockLimit(
                             resultSet.getInt("id"),
                             resultSet.getInt("limit"),
+                            resultSet.getInt("limitGroup"),
                             resultSet.getInt("blockId"),
                             resultSet.getInt("subValue"),
                             resultSet.getString("blockDisplayName"),
