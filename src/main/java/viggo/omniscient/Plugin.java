@@ -28,8 +28,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@SuppressWarnings("deprecation")
 public class Plugin extends JavaPlugin implements Listener {
 
+    private static final Integer WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS = 100;
     private static int TICKS_PER_SECOND = 20;
     public Logger logger = null;
     public Settings settings;
@@ -43,15 +45,19 @@ public class Plugin extends JavaPlugin implements Listener {
     Map<String, BlockStat> blockStats;
     private ConcurrentLinkedQueue<BlockInfo> unknownBlocksFound;
     private BukkitTask worldScanSchedule;
-    private BukkitTask masterSchedule;
+    private BukkitTask syncSchedule;
     private Set<String> debugPlayers;
+    private volatile PluginState state;
+    private BukkitTask tickSchedule;
+
 
     public void onDisable() {
         logger.logInfo("Disable invoked. Stopping engines.");
+        setState(PluginState.Disabled);
 
         if (databaseEngine != null) {
             try {
-                databaseEngine.stop();
+                databaseEngine.stop(WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -59,7 +65,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
         if (worldScannerEngine != null) {
             try {
-                worldScannerEngine.stop();
+                worldScannerEngine.stop(WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -69,16 +75,12 @@ public class Plugin extends JavaPlugin implements Listener {
     }
 
     public void onEnable() {
-
         logger = new Logger(this, getLogger());
+        setState(PluginState.Unknown);
 
         // make sure datafolder is present
         getDataFolder().mkdirs();
 
-        // try load
-        if (!reload(null)) {
-            logger.logSevere("Failed to load. Please fix the problem (likely shown above).");
-        }
 
         // register commands
         getCommand("omni").setExecutor(new viggo.omniscient.CommandExecutor(this, getLogger()));
@@ -86,24 +88,74 @@ public class Plugin extends JavaPlugin implements Listener {
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(this, this);
 
+        // reload synchronously
+        setState(PluginState.Reloading);
+        if (!reload(null, false)) {
+            logger.logSevere("Failed to load. Please fix the problem (likely shown above).");
+            startNotifyScheduler(10);
+        } else {
 
-        if (settings.autoWhiteListOffEnabled) {
-            DelayedWhiteListEnabler delayedWhiteListEnabler = new DelayedWhiteListEnabler(this);
-            BukkitTask task = Bukkit.getScheduler().runTaskLater(this, delayedWhiteListEnabler, 20 * settings.autoWhiteListOffDelaySeconds);
-            getServer().broadcastMessage("Omniscient will automatically disable white listing in %d seconds.");
+            if (settings.autoWhiteListOffEnabled) {
+                DelayedWhiteListEnabler delayedWhiteListEnabler = new DelayedWhiteListEnabler(this);
+                BukkitTask task = Bukkit.getScheduler().runTaskLater(this, delayedWhiteListEnabler, 20 * settings.autoWhiteListOffDelaySeconds);
+                getServer().broadcastMessage("Omniscient will automatically disable white listing in %d seconds.");
+            }
+
+            startNotifyScheduler(settings.notificationIntervalSeconds);
+            setState(PluginState.Running);
         }
 
+        logger.logInfo("Enabled: " + getDescription().getVersion() + ", Current state is: " + state);
+    }
 
-        logger.logInfo("Enabled: " + getDescription().getVersion());
+    private void startNotifyScheduler(int notificationIntervalSeconds) {
+        new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                try {
+
+                    if (getState() != PluginState.Running) {
+
+                        String message = "";
+
+                        switch (getState()) {
+
+                            case SafetyModeEmptyBlockInfo:
+
+                                message =
+                                        "Omniscient is in safety mode because information about limited blocks could not be loaded."
+                                                + " This is a normal event when first starting to use Omniscient. If you just started using Omniscient:  " +
+                                                "issue the command \"/omni reload ignoreEmptyBlockInfo\"";
+                                break;
+
+                            default:
+                                message = String.format("Omniscient is in %s state. ", getState().toString());
+                                break;
+                        }
+
+                        logger.logWarn(message);
+                        getServer().broadcastMessage(message);
+
+                    }
+
+                } catch (Throwable t) {
+                    logger.logSevere(t);
+                }
+            }
+
+        }.runTaskTimer(this, TICKS_PER_SECOND * 10, TICKS_PER_SECOND * notificationIntervalSeconds);
     }
 
     public boolean processUnknownBlocks() {
 
         // CAS to prevent reentry / buildup by commands and/or schedule
         if (!unknownBlocksProcessingState.compareAndSet(0, 1)) {
-            logger.logWarn("no re-entry allowed in processUnknownBlocks");
+            //logger.logWarn("no re-entry allowed in processUnknownBlocks");
             return false;
         }
+
+        int blockFixCount = 0;
 
         try {
 
@@ -120,7 +172,13 @@ public class Plugin extends JavaPlugin implements Listener {
                 if (settings.autoRemoveUnknownBlocksEnabled) {
 
                     while (unknownBlocksFound.size() > 0) {
+
+                        if (blockFixCount++ > settings.maximumUnknownBlocksToProcessPerTick) {
+                            return true;
+                        }
+
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
+
 
                         logger.logWarn(String.format("Removing block of type: %s @ %s:%d.%d.%d",
                                         blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
@@ -218,7 +276,8 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    private BukkitTask createSchedule() {
+
+    private BukkitTask createWorldScannerSchedule() {
         return new BukkitRunnable() {
 
             @Override
@@ -250,16 +309,28 @@ public class Plugin extends JavaPlugin implements Listener {
         }.runTaskTimer(this, TICKS_PER_SECOND * settings.scanChunksPeriodicallyDelaySeconds, TICKS_PER_SECOND * settings.scanChunksPeriodicallyIntervalSeconds);
     }
 
-    private BukkitTask create5secSchedule() {
+    private BukkitTask createSyncSchedule(int delaySeconds, int intervalSeconds) {
         return new BukkitRunnable() {
 
             @Override
             public void run() {
                 try {
 
-                    if (settings.autoSync) {
-                        sync(null);
-                    }
+                    syncRemovedBlocks(null);
+                } catch (Throwable t) {
+                    logger.logSevere(t);
+                }
+            }
+
+        }.runTaskTimer(this, TICKS_PER_SECOND * delaySeconds, TICKS_PER_SECOND * intervalSeconds);
+    }
+
+    private BukkitTask createTickSchedule() {
+        return new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                try {
 
                     processUnknownBlocks();
 
@@ -268,19 +339,28 @@ public class Plugin extends JavaPlugin implements Listener {
                 }
             }
 
-        }.runTaskTimer(this, TICKS_PER_SECOND * 5, TICKS_PER_SECOND * 5);
+        }.runTaskTimer(this, TICKS_PER_SECOND * 10, 1);
     }
 
     public String getBlockKeyFromInfo(BlockInfo blockInfo) {
         return String.format("%s:%d.%d.%d", blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z);
     }
 
-    public boolean reload(CommandSender sender) {
+    public boolean beginReload(final CommandSender sender, final boolean ignoreEmptyBlocks) {
+
+        setState(PluginState.Reloading);
+
         try {
 
-            if (masterSchedule != null) {
-                logger.logInfo("stopping 5 sec scheduler...");
-                masterSchedule.cancel();
+            if (tickSchedule != null) {
+                logger.logInfo("stopping tick scheduler...");
+                tickSchedule.cancel();
+            }
+
+
+            if (syncSchedule != null) {
+                logger.logInfo("stopping sync scheduler...");
+                syncSchedule.cancel();
             }
 
             if (worldScanSchedule != null) {
@@ -290,20 +370,66 @@ public class Plugin extends JavaPlugin implements Listener {
 
             if (worldScannerEngine != null) {
                 logger.logInfo("stopping world scanner engine...");
-                worldScannerEngine.stop();
+                worldScannerEngine.stop(WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS);
             }
 
             if (databaseEngine != null) {
                 logger.logInfo("stopping db engine...");
-                databaseEngine.stop();
+                databaseEngine.stop(WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS);
             }
+
+            final Plugin plugin = this;
+            Bukkit.getScheduler().runTaskAsynchronously(
+                    this,
+                    new BukkitRunnable() {
+
+                        @Override
+                        public void run() {
+
+                            final boolean wasReloadedWithSuccess = reload(sender, ignoreEmptyBlocks);
+
+                            new BukkitRunnable() {
+
+                                @Override
+                                public void run() {
+                                    onEndReload(sender, wasReloadedWithSuccess);
+                                }
+                            }.runTaskAsynchronously(plugin);
+                        }
+                    }
+            );
+
+
+            return true;
+        } catch (Throwable t) {
+            logger.logSevere(t, sender);
+            return false;
+        }
+    }
+
+    private void onEndReload(final CommandSender sender, boolean wasReloadedWithSuccess) {
+        sender.sendMessage("Was reloaded with success: " + wasReloadedWithSuccess);
+
+        if (wasReloadedWithSuccess) {
+            setState(PluginState.Running);
+        } else {
+            setState(PluginState.ReloadError);
+        }
+    }
+
+    private boolean reload(CommandSender sender, boolean ignoreEmptyBlocks) {
+
+        try {
 
             unknownBlocksFound = new ConcurrentLinkedQueue<BlockInfo>();
             unknownBlocksProcessingState.set(0);
             debugPlayers = new HashSet<String>();
 
             logger.logInfo("reloading settings...");
-            reloadSettings();
+            if (!reloadSettings()) {
+                logger.logSevere("failed to reload settings. ");
+                return false;
+            }
 
             logger.logInfo("starting db engine...");
 
@@ -314,7 +440,7 @@ public class Plugin extends JavaPlugin implements Listener {
             databaseEngine.start();
 
             logger.logInfo("reloading data...");
-            reloadData();
+            reloadData(ignoreEmptyBlocks);
 
             logger.logInfo("starting world scanner engine...");
             worldScannerState.set(0);
@@ -323,20 +449,27 @@ public class Plugin extends JavaPlugin implements Listener {
 
             if (settings.scanChunksPeriodicallyEnabled) {
             /* queue all loaded chunks for scanning */
-                worldScanSchedule = createSchedule();
+                worldScanSchedule = createWorldScannerSchedule();
             }
 
-            masterSchedule = create5secSchedule();
+            if (settings.syncRemovedBlocksPeriodicallyEnabled) {
+                syncSchedule = createSyncSchedule(10, settings.syncRemovedBlocksPeriodicallyIntervalSeconds);
+            }
+
+            tickSchedule = createTickSchedule();
+
 
             return true;
+
         } catch (Throwable t) {
             logger.logSevere(t, sender);
             return false;
         }
     }
 
-    public void reloadData() {
+    public void reloadData(boolean ignoreEmptyBlocks) throws Exception {
         playerBlocks = databaseEngine.getPlayerBlocks();
+
         playerToBlockCoordsMap = new ConcurrentHashMap<String, String>();
 
         Set<String> playerNames = playerBlocks.keySet();
@@ -353,8 +486,23 @@ public class Plugin extends JavaPlugin implements Listener {
         }
 
         blockLimits = databaseEngine.getBlockLimits();
-
         blockStats = databaseEngine.getBlockStats();
+
+
+        // if auto replace / removal is enabled
+        if (!ignoreEmptyBlocks && blockLimits.size() > 0 && playerBlocks.size() < 1 && !settings.doAllowEmptyBlockInfo
+                // makes no sense to warn about this, if auto removal is deactivated
+                && (
+                settings.autoRemoveUnknownBlocksEnabled
+                        || settings.autoReplaceUnknownBlocksEnabled
+                        || settings.autoReplaceUnknownBlocksWithSignEnabled
+        )
+                ) {
+            setState(PluginState.SafetyModeEmptyBlockInfo);
+            throw new Exception("No player blocks could be retrieved from the database. This could be a grave error or " +
+                    "maybe it is the first time omniscient is run on the server but with limits already specified in the database.");
+        }
+
     }
 
     public void doDisableWhiteList() {
@@ -369,13 +517,22 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerJoined(PlayerJoinEvent event) {
-
+        if (this.getState() != PluginState.Running) {
+            return;
+        }
     }
 
     @EventHandler
     public void onPlayerInteractEvent(PlayerInteractEvent event) {
 
+        if (this.getState() != PluginState.Running) {
+            return;
+        }
+
         try {
+
+            //event.getPlayer().damage(3);
+
             if (event.getPlayer().getItemInHand().getTypeId() != 288) {
                 return;
             }
@@ -434,7 +591,9 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerInteractEntityEvent(PlayerInteractEntityEvent event) {
-
+        if (this.getState() != PluginState.Running) {
+            return;
+        }
     }
 
     public String getBlockIdFromBlock(Block block) {
@@ -443,6 +602,10 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
+        if (this.getState() != PluginState.Running) {
+            return;
+        }
+
         if (!settings.scanChunksOnLoad || event.isNewChunk()) {
             return;
         }
@@ -532,6 +695,17 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
+
+        if (this.getState() != PluginState.Running) {
+
+            event.getPlayer().sendMessage("Omniscient is not processing events. " +
+                            "It may be reloading or in an erroneous state. Contact server admin if this continues for more than a minute."
+            );
+
+            event.setCancelled(true);
+
+            return;
+        }
 
         if (event.isCancelled()) {
             return;
@@ -642,7 +816,7 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    public boolean sync(CommandSender sender) {
+    public boolean syncRemovedBlocks(CommandSender sender) {
 
         try {
 
@@ -650,7 +824,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 return false;
             }
 
-            // TODO: we should prevent further placement / breaking of blocks during sync etc.
+            // TODO: we should prevent further placement / breaking of blocks during syncRemovedBlocks etc.
 
             Set<String> playerNames = playerBlocks.keySet();
             for (String playerName : playerNames) {
@@ -696,6 +870,18 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
+
+        if (this.getState() != PluginState.Running) {
+
+            event.getPlayer().sendMessage("Omniscient is not processing events. " +
+                            "It may be reloading or in an erroneous state. Contact server admin if this continues for more than a minute."
+            );
+
+            event.setCancelled(true);
+
+            return;
+        }
+
         try {
             Block block = event.getBlock();
             String worldName = event.getBlock().getWorld().getName();
@@ -737,24 +923,21 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    private void reloadSettings() {
+    private boolean reloadSettings() {
 
         try {
 
-            // make sure that config is up to date
-            super.getConfig().options().copyDefaults(true);
-
-            super.reloadConfig();
-
-            super.saveConfig();
-
             /* load values from config */
-            settings = Settings.load(this);
+            settings = new Settings(this);
+            settings.load();
 
             logger.logInfo("reloadSettings done");
 
+            return true;
+
         } catch (Throwable t) {
             logger.logSevere(t);
+            return false;
         }
     }
 
@@ -776,7 +959,24 @@ public class Plugin extends JavaPlugin implements Listener {
     }
 
     public void setUnknowBlocksToBeProcessed(ArrayList<BlockInfo> unknownBlocksFound) {
+
+        if (unknownBlocksFound.size() > settings.maximumUnknownBlocksToProcessBeforeSafetySwitch) {
+
+
+            setState(PluginState.SafetyModeTooManyUnknownBlocksFound);
+            return;
+        }
+
         this.unknownBlocksFound.addAll(unknownBlocksFound);
+    }
+
+    public PluginState getState() {
+        return state;
+    }
+
+    public void setState(PluginState state) {
+        logger.logInfo(String.format("State transition %s to %s", this.state, state));
+        this.state = state;
     }
 }
 

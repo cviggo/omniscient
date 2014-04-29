@@ -41,13 +41,13 @@ public class DatabaseEngine implements Runnable {
         this.doExitEngine = false;
     }
 
-    public void stop() throws InterruptedException {
+    public void stop(Integer waitForEngineToStopTimeoutMsecs) throws InterruptedException {
 
         synchronized (engineThreadLock) {
             doExitEngine = true;
 
             if (engineThread != null) {
-                engineThread.join();
+                engineThread.join(waitForEngineToStopTimeoutMsecs);
                 engineThread = null;
             }
         }

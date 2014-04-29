@@ -1,22 +1,78 @@
-dbHost: localhost
+# ----- database settings (omniscient requires a mysql database in order to work) -----
+dbHost: localhost # database host to use. examples: localhost, 127.0.0.1, mysql.some-domain.com
 dbPort: 3306
 dbCatalog: omniscient
 dbUser: omniscient
 dbPassword: typePasswordHere
-blockLimitsEnabled: true
-blockStatsEnabled: true
+
+# ----- auto white list off -----
 autoWhiteListOff: true
 autoWhiteListOffDelaySeconds: 120
-scanChunksOnLoad: true
-scanChunksPeriodicallyEnabled: true
-scanChunksPeriodicallyDelaySeconds: 300
-scanChunksPeriodicallyIntervalSeconds: 300
-scanChunksMinimumIntervalForSameChunkSeconds: 60
+
+# ----- automatic synchronization of removed blocks -----
+# players may use an unsupported tool to pickup a block a limited block. What ever the cause may be,
+# omniscient can scan for the blocks it knows and remove the registration for the ones that no longer matches.
+
+# synchronize periodically
+syncRemovedBlocksPeriodicallyEnabled: true
+syncRemovedBlocksPeriodicallyIntervalSeconds: 60
+
+# synchronize on events like players using a wrench on a limited block etc.
+syncRemovedBlocksOnEventsEnabled: true
+
+
+# ----- removal of unknown blocks -----
+# the following have prevalence in given order
+
+# if enabled omniscient will remove unknown blocks from the world
 autoRemoveUnknownBlocksEnabled: false
+
+# if enabled omniscient will replace unknown blocks from the world
 autoReplaceUnknownBlocksEnabled: false
 autoReplaceUnknownBlocksId: 3
 autoReplaceUnknownBlocksSubValue: 0
+
+# if enabled omniscient will place a sign instead of the above blockId (if not in mid air)
 autoReplaceUnknownBlocksWithSignEnabled: true
-autoSync: true
+
+# prevent omniscient from scanning certain blocks.
+# this makes sure that even if a block limit of stone etc. is by accident added,
+# omniscient cannot process the block for removal etc.
+blockIdScanBlackList: 0-50,51,52,53-255
+
+
+
+
+
+
+# ----- Advanced settings ------
+blockLimitsEnabled: true
+blockStatsEnabled: true
+maximumUnknownBlocksToProcessPerTick: 10
+maximumUnknownBlocksToProcessBeforeSafetySwitch: 100
+dumpUnknownBlockInfoToDiskOnSafetySwitch: true
 enablePlayerInfoOnBlockEvents: true
+notificationIntervalSeconds: 30
+
+# scan chunks when they load
+scanChunksOnLoad: true
+
+# scanning of loaded chunks
+scanChunksPeriodicallyEnabled: true
+scanChunksPeriodicallyDelaySeconds: 300
+scanChunksPeriodicallyIntervalSeconds: 600
+scanChunksMinimumIntervalForSameChunkSeconds: 600
+
+
+
+# omniscient will not even process events of any ids added here (use this if
+blockIdEventBlackList: 0
+
+# ----- Development settings (fingers off) -----
+
+# allows omniscient to load even if no known blocks are present
+# should always be false - if value is true omniscient may remove all unknown limited blocks from the world.
+doAllowEmptyBlockInfo: false
+
+# sends messages to a given player if errors are detected. makes little sense to use unless your developing the mod.
 devUser: unlessYourMeJustLeaveThisAlone

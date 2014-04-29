@@ -2,13 +2,21 @@ package viggo.omniscient;
 
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.reflections.Reflections;
 
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.logging.Logger;
+
+import static org.reflections.ReflectionUtils.getAllMethods;
 
 public class CommandExecutor implements org.bukkit.command.CommandExecutor {
     private final Plugin plugin;
@@ -20,18 +28,6 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
         this.logger = logger;
     }
 
-    static String join(Collection<?> s, String delimiter) {
-        StringBuilder builder = new StringBuilder();
-        Iterator<?> iter = s.iterator();
-        while (iter.hasNext()) {
-            builder.append(iter.next());
-            if (!iter.hasNext()) {
-                break;
-            }
-            builder.append(delimiter);
-        }
-        return builder.toString();
-    }
 
     private boolean isCommand(String[] args, RemainingCommands remainingCommands, String... expectedCommands) {
 
@@ -48,7 +44,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             }
         }
 
-        for (int i = args.length - expectedCommands.length; i < args.length; i++) {
+        for (int i = args.length - expectedCommands.length; i < args.length && i >= 0; i++) {
             remainingCommands.remainingCommands.add(args[i]);
         }
 
@@ -98,15 +94,109 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 //                return blocksRadius(sender, args);
 //            }
 
-            if (isCommand(args, r, "sync", "data")) {
-                final boolean wasSynced = plugin.sync(sender);
-                sender.sendMessage("Omniscient was synced: " + wasSynced);
+            if (isCommand(args, r, "sign")) {
+                final Player player = sender.getServer().getPlayer(sender.getName());
+//                final ItemStack itemOnCursor = player.getItemOnCursor();
+//                if (itemOnCursor == null){
+//                    return true;
+//                }
+
+                final Location location = player.getLocation();
+
+                final World world = player.getWorld();
+
+                final Block blockAt = world.getBlockAt(location.getBlockX(), location.getBlockY() - 1, location.getBlockZ());
+
+                if (blockAt.getType() == Material.AIR) {
+                    return true;
+                }
+
+                final Block blockAtLegs = world.getBlockAt(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+
+                if (blockAtLegs.getType() != Material.AIR) {
+                    return true;
+                }
+
+                blockAtLegs.setTypeIdAndData(3391, (byte) 0, true);
+
+                sender.sendMessage(blockAtLegs.getState().toString());
+
+                Reflections reflections = new Reflections("viggo.omniscient");
+
+                //final Set<Class<? extends DatabaseEngine>> subTypesOf = reflections.getSubTypesOf(DatabaseEngine.class);
+
+
+                final Set<Method> allMethods = getAllMethods(Class.forName("myrathi.flatsigns.FlatSigns"));
+
+                sender.sendMessage("allMethods: " + allMethods.size());
+
+                //blockAtLegs.getState();
+
+//                final org.bukkit.material.Sign signData = new org.bukkit.material.Sign(Material.SIGN_POST);
+//                signData.setFacingDirection(blockFace);
+//                sign.setData(signData);
+//
+//                sign.setLine(0, "99:99");
+//                sign.setLine(1, "was replaced by");
+//                sign.setLine(2, "Omniscient");
+//
+//                java.text.SimpleDateFormat sdf =
+//                        new java.text.SimpleDateFormat("dd/MM HH:mm:ss");
+//
+//                String time = sdf.format(new Date());
+//
+//                sign.setLine(3, time);
+//
+//
+//                sign.update(true, false);
+
+
+
+                return true;
+            }
+
+            if (isCommand(args, r, "inv", "import")) {
+                final Player player = sender.getServer().getPlayer(sender.getName());
+
+                final Location location = player.getLocation();
+
+                final World world = player.getWorld();
+
+                final Block blockAt = world.getBlockAt(location.getBlockX(), location.getBlockY() - 1, location.getBlockZ());
+
+                if (blockAt.getType() == Material.CHEST) {
+                    Chest chest = (Chest) blockAt.getState();
+                } else {
+                    sender.sendMessage(blockAt.getType().toString());
+                    //blockAt.get
+                }
+
+                //org.bukkit.material.Chest chest = (org.bukkit.material.Chest)blockAt.getState().getBlock().;
+
+                //sender.sendMessage(chest.getBlockInventory().getItem(0).toString());
+
+                return true;
+            }
+
+            if (isCommand(args, r, "reload", "ignoreEmptyBlockInfo")) {
+                boolean wasReloadStarted = plugin.beginReload(sender, true);
+                if (!wasReloadStarted) {
+                    sender.sendMessage("Reloaded could not be started. Perhaps try again.");
+                } else {
+                    sender.sendMessage("Reloaded started. Once reload is done, you will receive a message.");
+                }
+
                 return true;
             }
 
             if (isCommand(args, r, "reload")) {
-                boolean wasReloaded = plugin.reload(sender);
-                sender.sendMessage(String.format("Reloaded with success: %s", wasReloaded));
+                boolean wasReloadStarted = plugin.beginReload(sender, false);
+                if (!wasReloadStarted) {
+                    sender.sendMessage("Reloaded could not be started. Perhaps try again.");
+                } else {
+                    sender.sendMessage("Reloaded started. Once reload is done, you will receive a message.");
+                }
+
                 return true;
             }
 
@@ -131,6 +221,20 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             if (isCommand(args, r, "stats", "disable")) {
                 plugin.settings.blockStatsEnabled = false;
                 sender.sendMessage("stats are now disabled");
+                return true;
+            }
+
+            if (isCommand(args, r, "sync", "enable")) {
+                plugin.settings.syncRemovedBlocksPeriodicallyEnabled = true;
+                plugin.settings.syncRemovedBlocksOnEventsEnabled = true;
+                sender.sendMessage("sync is now enabled (periodic and events)");
+                return true;
+            }
+
+            if (isCommand(args, r, "sync", "disable")) {
+                plugin.settings.syncRemovedBlocksPeriodicallyEnabled = false;
+                plugin.settings.syncRemovedBlocksOnEventsEnabled = false;
+                sender.sendMessage("sync is now disabled (periodic and events)");
                 return true;
             }
 
@@ -289,7 +393,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                     worldNames.add(world.getName());
                 }
 
-                final String worldsString = join(worldNames, ", ").toLowerCase();
+                final String worldsString = Utils.join(worldNames, ", ").toLowerCase();
 
                 sender.sendMessage(worldsString);
 
@@ -339,6 +443,8 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 
         } catch (Throwable throwable) {
             plugin.logger.logSevere(throwable);
+            sender.sendMessage(throwable.getMessage());
+            return true;
         }
 
         return false;
