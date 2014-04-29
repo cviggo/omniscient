@@ -1,10 +1,11 @@
 package viggo.omniscient;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Settings {
+public class Settings implements Serializable {
     private final Set<String> defaultKeys;
     public String dbHost;
     public int dbPort;

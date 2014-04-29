@@ -444,7 +444,11 @@ public class Plugin extends JavaPlugin implements Listener {
 
             logger.logInfo("starting world scanner engine...");
             worldScannerState.set(0);
-            worldScannerEngine = new WorldScannerEngine(this, blockLimits);
+
+            final Map<String, BlockLimit> blockLimitsCopy = (Map<String, BlockLimit>) Utils.copyObject(blockLimits);
+            final Set<Integer> blackListCopy = (Set<Integer>) Utils.copyObject(settings.blockIdScanBlackList);
+
+            worldScannerEngine = new WorldScannerEngine(this, blockLimitsCopy, blackListCopy);
             worldScannerEngine.start();
 
             if (settings.scanChunksPeriodicallyEnabled) {

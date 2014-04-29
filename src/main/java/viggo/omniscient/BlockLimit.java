@@ -1,6 +1,8 @@
 package viggo.omniscient;
 
-public class BlockLimit {
+import java.io.Serializable;
+
+public class BlockLimit implements Serializable {
     int id;
     int limit;
     int limitGroup;

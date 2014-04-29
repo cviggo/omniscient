@@ -6,22 +6,25 @@ import org.bukkit.ChunkSnapshot;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class WorldScannerEngine implements Runnable {
     private final Plugin plugin;
     private final Map<String, BlockLimit> blockLimits;
+    private final Set<Integer> blackListedBlocks;
     private final Object engineThreadLock = new Object();
     Thread engineThread;
     private ConcurrentLinkedQueue<ChunkScanTask> chunkScanTasks;
     private ConcurrentHashMap<Long, Date> previouslyScannedChunks;
     private boolean doExitEngine;
 
-    WorldScannerEngine(Plugin plugin, Map<String, BlockLimit> blockLimits) {
+    WorldScannerEngine(Plugin plugin, Map<String, BlockLimit> blockLimits, Set<Integer> blackListedBlocks) {
 
         this.plugin = plugin;
         this.blockLimits = blockLimits;
+        this.blackListedBlocks = blackListedBlocks;
         this.chunkScanTasks = new ConcurrentLinkedQueue<ChunkScanTask>();
         this.previouslyScannedChunks = new ConcurrentHashMap<Long, Date>();
     }
@@ -77,7 +80,13 @@ public class WorldScannerEngine implements Runnable {
                                 int blockZ = chunkSnapshot.getZ() * 16 + z;
                                 int blockY = y;
 
-                                String blockId = chunkSnapshot.getBlockTypeId(x, y, z) + ":" + chunkSnapshot.getBlockData(x, y, z);
+                                final int blockTypeId = chunkSnapshot.getBlockTypeId(x, y, z);
+
+                                if (blackListedBlocks.contains(blockTypeId)) {
+                                    continue;
+                                }
+
+                                String blockId = blockTypeId + ":" + chunkSnapshot.getBlockData(x, y, z);
 
                                 if (blockLimits.containsKey(blockId)) {
 //                                    plugin.logInfo(

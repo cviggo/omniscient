@@ -1,9 +1,8 @@
 package viggo.omniscient;
 
-/**
- * Created by viggo on 23-04-2014.
- */
-public class BlockStat {
+import java.io.Serializable;
+
+public class BlockStat implements Serializable {
     int id;
     int current;
     int placed;

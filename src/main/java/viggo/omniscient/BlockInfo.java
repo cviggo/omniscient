@@ -2,12 +2,10 @@ package viggo.omniscient;
 
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import java.io.Serializable;
 import java.util.Date;
 
-/**
- * Created by viggo on 19-04-2014.
- */
-public class BlockInfo {
+public class BlockInfo implements Serializable {
 
     int id;
     String blockId;
