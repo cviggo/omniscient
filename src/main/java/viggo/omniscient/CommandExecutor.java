@@ -406,7 +406,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, r, "blocks", "list")) {
+            if (isCommand(args, r, "blocks", "list") && r.remainingCommands.size() < 1) {
                 for (String item : r.remainingCommands) {
                     plugin.logger.logInfo(item);
                 }
@@ -438,6 +438,86 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                     sender.sendMessage("No blocks of that type for given player.");
                 }
 
+                return true;
+            }
+
+            if (isCommand(args, r, "blocks", "list")) {
+
+                int currentCnt = 0;
+                int maxCnt = 100;
+
+                final Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(sender.getName());
+                final Set<String> keySet = map.keySet();
+                for (String key : keySet) {
+
+                    final ArrayList<BlockInfo> blockInfos = map.get(key);
+
+                    for (BlockInfo blockInfo : blockInfos) {
+
+                        sender.sendMessage(String.format("%s: %s", key, plugin.getBlockKeyFromInfo(blockInfo)));
+
+                        if (++currentCnt > maxCnt) {
+
+                            sender.sendMessage(String.format("Reached max count of %d", currentCnt));
+                            return true;
+                        }
+                    }
+                }
+
+                sender.sendMessage(String.format("Found a total of %d blocks", currentCnt));
+                return true;
+            }
+
+            if (isCommand(args, r, "unknown", "list")) {
+
+//                int currentCnt = 0;
+//                int maxCnt = 100;
+//
+//
+//                    final BlockInfo[] blockInfos = (BlockInfo[])plugin.unknownBlocksFound.toArray();
+//
+//                    for (BlockInfo blockInfo : blockInfos){
+//
+//                        sender.sendMessage(String.format("%s: %s", blockInfo.blockId, plugin.getBlockKeyFromInfo(blockInfo)));
+//
+//                        if (++currentCnt > maxCnt){
+//
+//                            sender.sendMessage(String.format("Reached max count of %d", currentCnt));
+//                            return true;
+//                        }
+//                    }
+//
+//                sender.sendMessage(String.format("Found a total of %d blocks", currentCnt));
+                return true;
+            }
+
+            if (isCommand(args, r, "superSmite")) {
+                final Player player = sender.getServer().getPlayer(sender.getName());
+                final World world = player.getWorld();
+                final Location location = player.getLocation();
+                final double x = location.getX();
+                final double z = location.getZ();
+
+                double rx = 1;
+                double maxRadiusOffset = 50;
+                double a = x;
+                double b = z;
+
+                for (double radiusOffset = maxRadiusOffset; radiusOffset >= 0; radiusOffset -= 10) {
+
+
+                    for (double i = 0.0; i < 6.26; i += 0.01) {
+
+                        double cx = x + (rx + radiusOffset) * Math.cos(i);
+                        double zx = z + (rx + radiusOffset) * Math.sin(i);
+
+                        world.strikeLightning(new Location(world, cx, location.getY(), zx));
+                    }
+                }
+            }
+
+            if (isCommand(args, r, "forceRun")) {
+                plugin.setState(PluginState.Running);
                 return true;
             }
 

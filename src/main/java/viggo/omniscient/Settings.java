@@ -55,7 +55,7 @@ public class Settings implements Serializable {
         plugin.getConfig().options().copyDefaults(true);
 
         // save config to persist any defaults added
-        plugin.saveConfig();
+        //plugin.saveConfig();
 
         // reload config
         plugin.reloadConfig();

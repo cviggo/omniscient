@@ -284,10 +284,14 @@ public class Plugin extends JavaPlugin implements Listener {
             public void run() {
                 try {
 
+                    //getServer().broadcastMessage("WSS ping");
+
                     // only enqueue chunks if not already busy
                     if (!worldScannerState.compareAndSet(0, 1)) {
                         return;
                     }
+
+                    //getServer().broadcastMessage("WSS go!");
 
                     final Date begin = new Date();
 
@@ -315,8 +319,10 @@ public class Plugin extends JavaPlugin implements Listener {
             @Override
             public void run() {
                 try {
+                    if (settings.syncRemovedBlocksPeriodicallyEnabled) {
+                        syncRemovedBlocks(null);
+                    }
 
-                    syncRemovedBlocks(null);
                 } catch (Throwable t) {
                     logger.logSevere(t);
                 }
@@ -614,12 +620,21 @@ public class Plugin extends JavaPlugin implements Listener {
             return;
         }
 
-        worldScannerEngine.queueChunkForScanning(event.getChunk(), false, false);
+        // HACK: disable queue on chunk load
+        //worldScannerEngine.queueChunkForScanning(event.getChunk(), false, false);
     }
 
     private void processLimitedBlockRemoval(Block block, String blockId, String worldName, Player player) {
 
         if (!settings.blockLimitsEnabled) {
+            return;
+        }
+
+
+        // HACK: dont auto remove multi structure blocks (use sync instead)
+        final int id = block.getTypeId();
+        if (id >= 2143 && id <= 2149) {
+            logger.logInfo("big reactor block: " + blockId);
             return;
         }
 
@@ -699,6 +714,8 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
+
+        //logger.logInfo("block place event: "+ event.getBlock().getTypeId());
 
         if (this.getState() != PluginState.Running) {
 
@@ -875,6 +892,8 @@ public class Plugin extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
 
+        //logger.logInfo("block break event: "+ event.getBlock().getTypeId());
+
         if (this.getState() != PluginState.Running) {
 
             event.getPlayer().sendMessage("Omniscient is not processing events. " +
@@ -947,7 +966,41 @@ public class Plugin extends JavaPlugin implements Listener {
 
     public boolean setDebugPlayer(Player player, boolean doEnable) {
 
+        // HACK: many hacks...
+//        getServer().broadcastMessage("UBs: " + unknownBlocksFound.size());
+//
+//        final org.bukkit.plugin.Plugin safeEdit = getServer().getPluginManager().getPlugin("SafeEdit");
+//        if (safeEdit != null) {
+//            getServer().broadcastMessage("found SafeEdit shit plugin...");
+//            getServer().getPluginManager().disablePlugin(safeEdit);
+//        } else {
+//            getServer().broadcastMessage("could not find SafeEdit shit plugin...");
+//        }
+//
         final String playerName = player.getName();
+//
+//
+//        int currentCnt = 0;
+//        int maxCnt = 100;
+//
+//
+//        final Object[] blockInfoObjs = unknownBlocksFound.toArray();
+//
+//        for (Object blockInfoObj : blockInfoObjs) {
+//
+//            BlockInfo blockInfo = (BlockInfo) blockInfoObj;
+//
+//            player.sendMessage(String.format("%s: %s", blockInfo.blockId, getBlockKeyFromInfo(blockInfo)));
+//
+//            if (++currentCnt > maxCnt) {
+//
+//                player.sendMessage(String.format("Reached max count of %d", currentCnt));
+//                return true;
+//            }
+//        }
+//
+//        player.sendMessage(String.format("Found a total of %d blocks", currentCnt));
+
 
         if (doEnable && !debugPlayers.contains(playerName)) {
             debugPlayers.add(playerName);
@@ -966,8 +1019,31 @@ public class Plugin extends JavaPlugin implements Listener {
 
         if (unknownBlocksFound.size() > settings.maximumUnknownBlocksToProcessBeforeSafetySwitch) {
 
-
+            // HACK: only dump if config says so!
+            getServer().broadcastMessage("BIG UB detected: " + unknownBlocksFound.size());
             setState(PluginState.SafetyModeTooManyUnknownBlocksFound);
+
+//            final String dumpLogFilename = String.format("%d.unknownBlocksDump.txt", new Date().getTime());
+//            final String dumpLogFilePath = getDataFolder().toString() + File.separator + dumpLogFilename;
+//
+//
+//            try {
+//                PrintWriter out = new PrintWriter(dumpLogFilePath);
+//
+//                for (BlockInfo blockInfo : unknownBlocksFound) {
+//
+//                    String message = blockInfo.blockId + ":" + getBlockKeyFromInfo(blockInfo);
+//
+//
+//                    out.println(message);
+//                }
+//                out.flush();
+//                out.close();
+//            } catch (FileNotFoundException e) {
+//                e.printStackTrace();
+//            }
+//
+//
             return;
         }
 
@@ -975,6 +1051,8 @@ public class Plugin extends JavaPlugin implements Listener {
     }
 
     public PluginState getState() {
+
+
         return state;
     }
 

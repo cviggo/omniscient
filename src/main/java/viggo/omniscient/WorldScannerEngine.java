@@ -30,17 +30,27 @@ public class WorldScannerEngine implements Runnable {
     }
 
     public void queueChunkForScanning(Chunk chunk, boolean isScheduled, boolean forceEnqueue) {
-        long id = chunk.getX() << 32 + chunk.getZ();
+
+        long id = (((long) chunk.getX()) << 32) | (chunk.getZ() & 0xffffffffL);
 
         if (!forceEnqueue) {
 
             if (previouslyScannedChunks.containsKey(id)) {
                 int minChunkScanIntervalMilliseconds = plugin.settings.scanChunksMinimumIntervalForSameChunkSeconds * 1000;
-                if (new Date().getTime() - previouslyScannedChunks.get(id).getTime() < minChunkScanIntervalMilliseconds) {
+                final long lastScanned = new Date().getTime() - previouslyScannedChunks.get(id).getTime();
+                if (lastScanned < minChunkScanIntervalMilliseconds) {
+                    //plugin.logger.logInfo(id + ": skipping chunk due to recently scanned: " + lastScanned + " msecs ago");
                     return;
                 }
             }
         }
+
+//        if (previouslyScannedChunks.containsKey(id)){
+//            final long ago = new Date().getTime() - previouslyScannedChunks.get(id).getTime();
+//            plugin.logger.logInfo(id + ": readding chunk after time: " + ago);
+//        }
+
+        previouslyScannedChunks.remove(id);
 
         previouslyScannedChunks.put(id, new Date());
         chunkScanTasks.add(new ChunkScanTask(chunk.getChunkSnapshot(true, false, false), isScheduled));
@@ -126,6 +136,7 @@ public class WorldScannerEngine implements Runnable {
                     plugin.logger.logInfo(String.format("Scanned %d blocks in %d msecs (%f blocks / sec). Found %d unknown blocks",
 
                             processedBlocks, elapsedMsecs, (double) processedBlocks / ((double) elapsedMsecs / 1000.0), unknownBlocksFound.size()));
+
 
                     plugin.setUnknowBlocksToBeProcessed(unknownBlocksFound);
 
