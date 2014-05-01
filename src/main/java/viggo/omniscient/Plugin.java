@@ -41,9 +41,9 @@ public class Plugin extends JavaPlugin implements Listener {
     public AtomicInteger worldScannerState = new AtomicInteger();
 
     /**
-     * Map from blockKey to player name. This is used to perform a lookup from a world position to a player name.
+     * Map from blockKey to player name. This is used to perform a lookup from a world position to a player name and info.
      */
-    ConcurrentHashMap<String, String> playerToBlockCoordsMap; // map from coords to player name
+    ConcurrentHashMap<String, BlockInfo> playerToBlockCoordsMap;
 
     /**
      * Map from player name to Map of block types, which then maps to a list of block info.
@@ -482,7 +482,7 @@ public class Plugin extends JavaPlugin implements Listener {
     public void reloadData(boolean ignoreEmptyBlocks) throws Exception {
         playerBlocks = databaseEngine.getPlayerBlocks();
 
-        playerToBlockCoordsMap = new ConcurrentHashMap<String, String>();
+        playerToBlockCoordsMap = new ConcurrentHashMap<String, BlockInfo>();
 
         Set<String> playerNames = playerBlocks.keySet();
         for (String playerName : playerNames) {
@@ -491,7 +491,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 for (BlockInfo blockInfo : blockType) {
                     playerToBlockCoordsMap.put(
                             getBlockKeyFromInfo(blockInfo),
-                            playerName
+                            blockInfo
                     );
                 }
             }
@@ -556,12 +556,6 @@ public class Plugin extends JavaPlugin implements Listener {
             final String blockIdFromBlock = getBlockIdFromBlock(clickedBlock);
 
 
-            if (!blockLimits.containsKey(blockIdFromBlock)) {
-                return;
-            }
-
-            BlockLimit blockLimit = blockLimits.get(blockIdFromBlock);
-
             BlockInfo blockInfo = new BlockInfo(0, blockIdFromBlock, clickedBlock.getWorld().getName(),
                     clickedBlock.getX(), clickedBlock.getY(), clickedBlock.getZ(), null, null);
 
@@ -572,7 +566,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
              /* attempt to get information */
             if (playerToBlockCoordsMap.containsKey(blockKey)) {
-                owner = playerToBlockCoordsMap.get(blockKey);
+                owner = playerToBlockCoordsMap.get(blockKey).placedBy;
 
                 final Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(owner);
 
@@ -582,14 +576,33 @@ public class Plugin extends JavaPlugin implements Listener {
                 }
             }
 
-            event.getPlayer().sendMessage(
-                    String.format("%s is owned by: %s. Limit: %s of %d",
-                            blockLimit.blockDisplayName,
-                            owner != null ? owner : "unknown",
-                            current > -1 ? current : "unknown",
-                            blockLimit.limit
-                    )
-            );
+            BlockLimit blockLimit = null;
+            if (blockLimits.containsKey(blockIdFromBlock)) {
+                blockLimit = blockLimits.get(blockIdFromBlock);
+            }
+
+            String message;
+
+            if (blockLimit != null) {
+                message = String.format("%s is owned by: %s. Limit: %s of %s",
+                        blockLimit.blockDisplayName,
+                        owner != null ? owner : "unknown",
+                        current > -1 ? current : "unknown",
+                        blockLimit.limit
+                );
+            } else {
+
+                if (owner != null) {
+                    message = String.format("The position is owned by: %s.",
+                            owner != null ? owner : "unknown"
+                    );
+                } else {
+                    message = String.format("Mother earth owns this block (%s)", blockInfo.blockId);
+                }
+
+            }
+
+            event.getPlayer().sendMessage(message);
 
             event.setCancelled(true);
 
@@ -629,27 +642,24 @@ public class Plugin extends JavaPlugin implements Listener {
             return;
         }
 
-        final BlockLimit blockLimit = blockLimits.get(blockId);
-        final int limit = blockLimit.limit;
 
         // TODO: optimize
-        BlockInfo blockInfo = new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), null, null);
-        String blockKey = getBlockKeyFromInfo(blockInfo);
+        String blockKey = getBlockKeyFromInfo(new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), null, null));
 
         // do we have the players name whom placed the block?
         if (!playerToBlockCoordsMap.containsKey(blockKey)) {
             return;
         }
 
-        String playerNameWhomPlacedTheBlock = playerToBlockCoordsMap.get(blockKey);
+        final BlockInfo originallyPlacedBlockInfo = playerToBlockCoordsMap.get(blockKey);
 
-        Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerNameWhomPlacedTheBlock);
+        Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(originallyPlacedBlockInfo.placedBy);
 
-        if (!map.containsKey(blockId)) {
+        if (!map.containsKey(originallyPlacedBlockInfo.blockId)) {
             return;
         }
 
-        ArrayList<BlockInfo> blockList = map.get(blockId);
+        ArrayList<BlockInfo> blockList = map.get(originallyPlacedBlockInfo.blockId);
 
 
         // TODO: seems rather redundant to check again, we know that a player has that block at given position...
@@ -659,6 +669,8 @@ public class Plugin extends JavaPlugin implements Listener {
         int y = block.getY();
         int z = block.getZ();
 
+        BlockInfo blockInfoRemoved = null;
+
         for (Iterator<?> it = blockList.iterator(); it.hasNext(); ) {
             BlockInfo blockInfoFromList = (BlockInfo) it.next();
             if (worldName.equals(blockInfoFromList.world)
@@ -666,29 +678,43 @@ public class Plugin extends JavaPlugin implements Listener {
                     && y == blockInfoFromList.y
                     && z == blockInfoFromList.z) {
                 // remove from list
+                blockInfoRemoved = blockInfoFromList;
                 it.remove();
-
                 databaseEngine.deleteBlockInfo(blockInfoFromList);
             }
         }
 
         // remove from coordinate to player map as well
-        playerToBlockCoordsMap.remove(playerNameWhomPlacedTheBlock);
+        playerToBlockCoordsMap.remove(originallyPlacedBlockInfo.placedBy);
 
         if (settings.enablePlayerInfoOnBlockEvents) {
 
-            if (playerNameWhomPlacedTheBlock.equals(player.getName())) {
+            BlockLimit blockLimit = null;
+            int limit = -1;
+
+            if (blockLimits.containsKey(blockInfoRemoved.blockId)) {
+                blockLimit = blockLimits.get(blockInfoRemoved.blockId);
+                limit = blockLimit.limit;
+            }
+
+            if (originallyPlacedBlockInfo.placedBy.equals(player.getName())) {
                 // players own block
-                player.sendMessage("Removed " + blockLimit.blockDisplayName + ". You now have " + (limit - blockList.size()) + " remaining.");
+
+                String remainingStr = blockLimit != null ? (limit - blockList.size()) + "" : "unknown";
+
+                player.sendMessage(
+                        "Removed " + blockLimit != null ? blockLimit.blockDisplayName : "unknown"
+                                + ". You now have " + remainingStr + " remaining."
+                );
             } else {
 
 
                 // another players block
-                String toPlayer = String.format("Removed %s. %s now has %d remaining.", blockLimit.blockDisplayName, playerNameWhomPlacedTheBlock, (limit - blockList.size()));
+                String toPlayer = String.format("Removed %s. %s now has %d remaining.", blockLimit.blockDisplayName, originallyPlacedBlockInfo.placedBy, (limit - blockList.size()));
                 player.sendMessage(toPlayer);
 
                 // is playerNameWhomPlacedTheBlock online - if so, tell the player?
-                final Player player2 = getServer().getPlayer(playerNameWhomPlacedTheBlock);
+                final Player player2 = getServer().getPlayer(originallyPlacedBlockInfo.placedBy);
                 if (player2 != null) {
                     player2.sendMessage(
                             String.format(
@@ -813,7 +839,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 blockList.add(blockInfo);
 
                 // add to coordinate to player map
-                playerToBlockCoordsMap.put(getBlockKeyFromInfo(blockInfo), playerName);
+                playerToBlockCoordsMap.put(getBlockKeyFromInfo(blockInfo), blockInfo);
 
                 // add to database
                 databaseEngine.setBlockInfo(blockInfo);
@@ -914,8 +940,8 @@ public class Plugin extends JavaPlugin implements Listener {
             String worldName = event.getBlock().getWorld().getName();
             String blockId = getBlockIdFromBlock(block);
 
-            // skip if block is not limited
-            if (!blockLimits.containsKey(blockId)) {
+//            // skip if block is not limited
+//            if (!blockLimits.containsKey(blockId)) {
 
                 // do not track vanilla / mined blocks
                 if (!settings.blockStatsEnabled || block.getType().getId() < 256) {
@@ -934,8 +960,8 @@ public class Plugin extends JavaPlugin implements Listener {
                     databaseEngine.setBlockStat(blockStat);
                 }
 
-                return;
-            }
+            //return;
+            // }
 
             processLimitedBlockRemoval(block, blockId, worldName, event.getPlayer());
 
