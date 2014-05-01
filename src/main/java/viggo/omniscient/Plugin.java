@@ -39,8 +39,17 @@ public class Plugin extends JavaPlugin implements Listener {
     public WorldScannerEngine worldScannerEngine;
     public AtomicInteger unknownBlocksProcessingState = new AtomicInteger();
     public AtomicInteger worldScannerState = new AtomicInteger();
+
+    /**
+     * Map from blockKey to player name. This is used to perform a lookup from a world position to a player name.
+     */
     ConcurrentHashMap<String, String> playerToBlockCoordsMap; // map from coords to player name
+
+    /**
+     * Map from player name to Map of block types, which then maps to a list of block info.
+     */
     Map<String, Map<String, ArrayList<BlockInfo>>> playerBlocks;
+
     Map<String, BlockLimit> blockLimits;
     Map<String, BlockStat> blockStats;
     private ConcurrentLinkedQueue<BlockInfo> unknownBlocksFound;
@@ -117,7 +126,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                     if (getState() != PluginState.Running) {
 
-                        String message = "";
+                        String message;
 
                         switch (getState()) {
 
@@ -284,16 +293,10 @@ public class Plugin extends JavaPlugin implements Listener {
             public void run() {
                 try {
 
-                    //getServer().broadcastMessage("WSS ping");
-
                     // only enqueue chunks if not already busy
                     if (!worldScannerState.compareAndSet(0, 1)) {
                         return;
                     }
-
-                    //getServer().broadcastMessage("WSS go!");
-
-                    final Date begin = new Date();
 
                     final List<World> worldList = getServer().getWorlds();
 
@@ -301,7 +304,6 @@ public class Plugin extends JavaPlugin implements Listener {
                         final Chunk[] loadedChunks = world.getLoadedChunks();
                         for (Chunk loadedChunk : loadedChunks) {
                             worldScannerEngine.queueChunkForScanning(loadedChunk, true, false);
-                            //totalChunks++;
                         }
                     }
 
@@ -541,8 +543,6 @@ public class Plugin extends JavaPlugin implements Listener {
 
         try {
 
-            //event.getPlayer().damage(3);
-
             if (event.getPlayer().getItemInHand().getTypeId() != 288) {
                 return;
             }
@@ -620,21 +620,12 @@ public class Plugin extends JavaPlugin implements Listener {
             return;
         }
 
-        // HACK: disable queue on chunk load
-        //worldScannerEngine.queueChunkForScanning(event.getChunk(), false, false);
+        worldScannerEngine.queueChunkForScanning(event.getChunk(), false, false);
     }
 
     private void processLimitedBlockRemoval(Block block, String blockId, String worldName, Player player) {
 
         if (!settings.blockLimitsEnabled) {
-            return;
-        }
-
-
-        // HACK: dont auto remove multi structure blocks (use sync instead)
-        final int id = block.getTypeId();
-        if (id >= 2143 && id <= 2149) {
-            logger.logInfo("big reactor block: " + blockId);
             return;
         }
 
@@ -841,11 +832,15 @@ public class Plugin extends JavaPlugin implements Listener {
 
         try {
 
-            if (databaseEngine.hasUnsavedItems()) {
+            if (state != PluginState.Running) {
                 return false;
             }
 
-            // TODO: we should prevent further placement / breaking of blocks during syncRemovedBlocks etc.
+//            if (databaseEngine.hasUnsavedItems()) {
+//                return false;
+//            }
+
+            state = PluginState.Synchronizing;
 
             Set<String> playerNames = playerBlocks.keySet();
             for (String playerName : playerNames) {
@@ -862,18 +857,25 @@ public class Plugin extends JavaPlugin implements Listener {
 
                         if (world != null) {
                             Block blockInWorld = world.getBlockAt(blockInfoFromList.x, blockInfoFromList.y, blockInfoFromList.z);
-                            blockIdInWorld = getBlockIdFromBlock(blockInWorld);
+                            if (blockInWorld != null && blockInWorld.getType() != Material.AIR) {
+                                blockIdInWorld = getBlockIdFromBlock(blockInWorld);
+                            }
                         }
 
 
-                        if (blockIdInWorld == null || !blockInfoFromList.blockId.equals(blockIdInWorld)) {
-                            logger.logInfo("Found mismatching block at "
+                        if (blockIdInWorld == null/* || */) {
+                            logger.logInfo("Found missing block at "
                                             + String.format("%s:%d.%d.%d", blockInfoFromList.world, blockInfoFromList.x, blockInfoFromList.y, blockInfoFromList.z)
                             );
 
                             playerToBlockCoordsMap.remove(blockKey);
                             databaseEngine.deleteBlockInfo(blockInfoFromList);
                             it.remove();
+                        } else {
+                            // it was a non-air block, but is it the same block type that was originally placed?
+                            if (!blockInfoFromList.blockId.equals(blockIdInWorld)) {
+                                // TODO: mark the block info as a changed block
+                            }
                         }
 
                     }
@@ -881,10 +883,12 @@ public class Plugin extends JavaPlugin implements Listener {
                 }
             }
 
+            state = PluginState.Running;
             return true;
 
         } catch (Throwable t) {
             logger.logSevere(t);
+            state = PluginState.Running;
             return false;
         }
     }
