@@ -200,6 +200,11 @@ public class Plugin extends JavaPlugin implements Listener {
                         );
 
 
+                        World world = getServer().getWorld(blockInfo.world);
+
+                        Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
+
+                        block.setType(Material.AIR);
                     }
 
                     unknownBlocksProcessingState.set(0);
@@ -1185,6 +1190,11 @@ public class Plugin extends JavaPlugin implements Listener {
 
     public void setState(PluginState state) {
         logger.logInfo(String.format("Plugin state transition %s to %s", this.state, state));
+
+        if (state == PluginState.Running) {
+            getServer().broadcastMessage(ChatColor.GREEN + "Omniscient is now running.");
+        }
+
         this.state = state;
     }
 

@@ -41,10 +41,15 @@ public class Settings implements Serializable {
     public boolean autoAssignUnknownBlocksToOmniscientFakePlayerEnabled;
     private Plugin plugin;
 
-    public Settings(Plugin plugin) {
+    public Settings(Plugin plugin) throws Exception {
 
         this.plugin = plugin;
-        this.defaultKeys = plugin.getConfig().getDefaults().getKeys(true);
+
+        if (plugin.getConfig().getDefaults() != null) {
+            this.defaultKeys = plugin.getConfig().getDefaults().getKeys(true);
+        } else {
+            throw new Exception("Failed to read default configuration");
+        }
     }
 
     public void load() throws Exception {
