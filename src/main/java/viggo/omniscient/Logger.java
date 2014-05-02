@@ -22,16 +22,16 @@ public class Logger {
     }
 
     public void logInfo(String message) {
-        uLogger.info(message);
+        uLogger.info(String.format("[%d] %s", Thread.currentThread().getId(), message));
     }
 
     public void logWarn(String message) {
-        uLogger.warning(message);
+        uLogger.warning(String.format("[%d] %s", Thread.currentThread().getId(), message));
     }
 
     public void logSevere(String message) {
 
-        uLogger.severe(message);
+        uLogger.severe(String.format("[%d] %s", Thread.currentThread().getId(), message));
 
         final int maxSevereLogsToDump = 10; // could consider settings, but nah!
 
@@ -42,7 +42,7 @@ public class Logger {
 
             try {
                 PrintWriter out = new PrintWriter(dumpLogFilePath);
-                out.println(message);
+                out.println(String.format("[%d] %s", Thread.currentThread().getId(), message));
                 out.flush();
                 out.close();
             } catch (FileNotFoundException e) {

@@ -33,7 +33,9 @@ autoReplaceUnknownBlocksId: 3
 autoReplaceUnknownBlocksSubValue: 0
 
 # if enabled omniscient will place a sign instead of the above blockId (if not in mid air)
-autoReplaceUnknownBlocksWithSignEnabled: true
+autoReplaceUnknownBlocksWithSignEnabled: false
+
+autoAssignUnknownBlocksToOmniscientFakePlayerEnabled: true
 
 # prevent omniscient from scanning certain blocks.
 # this makes sure that even if a block limit of stone etc. is by accident added,

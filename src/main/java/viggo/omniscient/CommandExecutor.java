@@ -171,6 +171,32 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
+//            if (isCommand(args, r, "test", "removeBlocks") && r.remainingCommands.size() == 3) {
+//                final int dist = r.getInt(0);
+//                final int x = r.getInt(1);
+//                final int z = r.getInt(2);
+//
+//                final Player player = sender.getServer().getPlayer(sender.getName());
+//                final Location location = player.getLocation();
+//                final World world = location.getWorld();
+//
+//
+//                //final int x = (int) location.getX();
+//                final int y = (int) location.getY();
+//                //final int z = (int) location.getZ();
+//
+//                for (int ix = -dist; ix < dist; ix++) {
+//                    for (int iy = -dist; iy < dist; iy++) {
+//                        for (int iz = -dist; iz < dist; iz++) {
+//                            world.getBlockAt(x + ix, (255 - dist) + iy, z + iz).setType(Material.AIR);
+//                        }
+//                    }
+//                }
+//
+//                sender.sendMessage("removed blocks");
+//                return true;
+//            }
+
 //            if (isCommand(args, r, "blocks", "player", 3)) {
 //                return blocksPlayer(sender, args);
 //            }

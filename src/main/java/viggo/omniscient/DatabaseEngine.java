@@ -82,6 +82,8 @@ public class DatabaseEngine implements Runnable {
 
                 synchronized (connectionLock) {
 
+                    plugin.logger.logInfo(String.format("DB Queues: Infos: %d, Stats: %d, Stats: %d", blockInfosToUpdate.size(), blockStatsToUpdate.size(), blockLimitsToUpdate.size()));
+
                     if (persistConnection()) {
 
                         updateBlockInfos();
@@ -235,13 +237,13 @@ public class DatabaseEngine implements Runnable {
             Statement statement = conn.createStatement();
 
             while (true) {
-                final UpdateTask<BlockInfo> updateTask = blockInfosToUpdate.poll();
+                UpdateTask<BlockInfo> updateTask = blockInfosToUpdate.poll();
 
                 if (updateTask == null || updateTask.t == null) {
                     break;
                 }
 
-                final BlockInfo blockInfo = updateTask.t;
+                BlockInfo blockInfo = updateTask.t;
                 String sql;
 
                 switch (updateTask.type) {
@@ -253,8 +255,10 @@ public class DatabaseEngine implements Runnable {
 
                         String time = sdf.format(blockInfo.placedWhen);
 
-                        sql = String.format(
-                                "INSERT INTO BlockInfo (`blockId`, `world`, `x`, `y`, `z`, `placedBy`, `placedWhen`) VALUES ('%s', '%s', %d, %d, %d, '%s', '%s')",
+                        sql = "INSERT INTO BlockInfo (`blockId`, `world`, `x`, `y`, `z`, `placedBy`, `placedWhen`) VALUES ";
+
+                        sql += String.format(
+                                "('%s', '%s', %d, %d, %d, '%s', '%s')",
                                 blockInfo.blockId,
                                 blockInfo.world,
                                 blockInfo.x,
@@ -263,6 +267,34 @@ public class DatabaseEngine implements Runnable {
                                 blockInfo.placedBy,
                                 time
                         );
+
+                        int currentTailedValues = 0;
+
+                        while (blockInfosToUpdate.size() > 0) {
+
+                            updateTask = blockInfosToUpdate.poll();
+                            if (updateTask == null || updateTask.t == null) {
+                                break;
+                            }
+
+                            blockInfo = updateTask.t;
+
+                            sql += String.format(
+                                    ", ('%s', '%s', %d, %d, %d, '%s', '%s')",
+                                    blockInfo.blockId,
+                                    blockInfo.world,
+                                    blockInfo.x,
+                                    blockInfo.y,
+                                    blockInfo.z,
+                                    blockInfo.placedBy,
+                                    time
+                            );
+
+                            if (currentTailedValues++ > 500) {
+                                break;
+                            }
+                        }
+
 
                         statement.addBatch(sql);
                         break;

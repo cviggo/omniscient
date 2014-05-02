@@ -38,6 +38,7 @@ public class Settings implements Serializable {
     public int maximumUnknownBlocksToProcessPerTick;
     public int maximumUnknownBlocksToProcessBeforeSafetySwitch;
     public boolean dumpUnknownBlockInfoToDiskOnSafetySwitch;
+    public boolean autoAssignUnknownBlocksToOmniscientFakePlayerEnabled;
     private Plugin plugin;
 
     public Settings(Plugin plugin) {
@@ -83,7 +84,7 @@ public class Settings implements Serializable {
         this.autoReplaceUnknownBlocksId = getInt("autoReplaceUnknownBlocksId");
         this.autoReplaceUnknownBlocksSubValue = getInt("autoReplaceUnknownBlocksSubValue");
         this.autoReplaceUnknownBlocksWithSignEnabled = getBoolean("autoReplaceUnknownBlocksWithSignEnabled");
-
+        this.autoAssignUnknownBlocksToOmniscientFakePlayerEnabled = getBoolean("autoAssignUnknownBlocksToOmniscientFakePlayerEnabled");
 
         this.syncRemovedBlocksPeriodicallyEnabled = getBoolean("syncRemovedBlocksPeriodicallyEnabled");
         this.syncRemovedBlocksPeriodicallyIntervalSeconds = getInt("syncRemovedBlocksPeriodicallyIntervalSeconds");

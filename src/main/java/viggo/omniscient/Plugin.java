@@ -166,7 +166,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
         // CAS to prevent reentry / buildup by commands and/or schedule
         if (!unknownBlocksProcessingState.compareAndSet(0, 1)) {
-            //logger.logWarn("no re-entry allowed in processUnknownBlocks");
+            logger.logWarn("no re-entry allowed in processUnknownBlocks");
             return false;
         }
 
@@ -189,17 +189,17 @@ public class Plugin extends JavaPlugin implements Listener {
                     while (unknownBlocksFound.size() > 0) {
 
                         if (blockFixCount++ > settings.maximumUnknownBlocksToProcessPerTick) {
+                            unknownBlocksProcessingState.set(0);
                             return true;
                         }
 
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
 
-
                         logger.logWarn(String.format("Removing block of type: %s @ %s:%d.%d.%d",
                                         blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
                         );
 
-                        getServer().getWorld(blockInfo.world).getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z).setType(Material.AIR);
+
                     }
 
                     unknownBlocksProcessingState.set(0);
@@ -210,6 +210,12 @@ public class Plugin extends JavaPlugin implements Listener {
                 if (settings.autoReplaceUnknownBlocksEnabled) {
 
                     while (unknownBlocksFound.size() > 0) {
+
+                        if (blockFixCount++ > settings.maximumUnknownBlocksToProcessPerTick) {
+                            unknownBlocksProcessingState.set(0);
+                            return true;
+                        }
+
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
 
                         if (settings.autoReplaceUnknownBlocksId < 0) {
@@ -233,6 +239,12 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 if (settings.autoReplaceUnknownBlocksWithSignEnabled) {
                     while (unknownBlocksFound.size() > 0) {
+
+                        if (blockFixCount++ > settings.maximumUnknownBlocksToProcessPerTick) {
+                            unknownBlocksProcessingState.set(0);
+                            return true;
+                        }
+
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
 
                         logger.logWarn(String.format("Replacing block of type: %s @ %s:%d.%d.%d with a sign.",
@@ -278,6 +290,61 @@ public class Plugin extends JavaPlugin implements Listener {
                         sign.update(true, false);
 
                     }
+
+                    unknownBlocksProcessingState.set(0);
+                    return true;
+                }
+
+                if (settings.autoAssignUnknownBlocksToOmniscientFakePlayerEnabled) {
+
+                    while (unknownBlocksFound.size() > 0) {
+
+                        if (blockFixCount++ > settings.maximumUnknownBlocksToProcessPerTick) {
+                            unknownBlocksProcessingState.set(0);
+                            return true;
+                        }
+
+                        final BlockInfo blockInfo = unknownBlocksFound.poll();
+
+
+                        String playerName = "FakePlayer";
+                        blockInfo.placedBy = playerName;
+                        blockInfo.placedWhen = new Date();
+
+                        // HACK: code copy
+                        // make sure there is a map for the player
+                        if (!playerBlocks.containsKey(playerName)) {
+                            playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
+                        }
+
+                        Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerName);
+
+                        // make sure there is a list available for the type of block
+                        if (!map.containsKey(blockInfo.blockId)) {
+                            ArrayList<BlockInfo> list = new ArrayList<BlockInfo>();
+                            map.put(blockInfo.blockId, list);
+                        }
+
+                        ArrayList<BlockInfo> blockList = map.get(blockInfo.blockId);
+
+
+                        //BlockInfo blockInfo = new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), playerName, new Date());
+
+                        // add to list of blocks
+                        blockList.add(blockInfo);
+
+                        // add to coordinate to player map
+                        playerToBlockCoordsMap.put(getBlockKeyFromInfo(blockInfo), blockInfo);
+
+                        // add to database
+                        databaseEngine.setBlockInfo(blockInfo);
+
+
+                    }
+
+                    unknownBlocksProcessingState.set(0);
+                    return true;
+
                 }
             }
 
@@ -844,7 +911,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
             ArrayList<BlockInfo> blockList = map.get(blockId);
 
-            if ((blockList.size() + 1) > limit && !event.getPlayer().isOp()) {
+            if (limit > -1 && (blockList.size() + 1) > limit && !event.getPlayer().isOp()) {
                 event.setCancelled(true);
 
                 if (settings.enablePlayerInfoOnBlockEvents) {
@@ -864,7 +931,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 // add to database
                 databaseEngine.setBlockInfo(blockInfo);
 
-                if (settings.enablePlayerInfoOnBlockEvents) {
+                if (limit > -1 && settings.enablePlayerInfoOnBlockEvents && (blockList.size() + 5) > limit) { // HOTFIX: show limit only when 5 or less remaining
                     event.getPlayer().sendMessage("You can place an additional " + (limit - blockList.size()) + " of " + blockLimit.blockDisplayName + ".");
                 }
             }
@@ -921,6 +988,8 @@ public class Plugin extends JavaPlugin implements Listener {
                             playerToBlockCoordsMap.remove(blockKey);
                             databaseEngine.deleteBlockInfo(blockInfoFromList);
                             it.remove();
+
+
                         } else {
                             // it was a non-air block, but is it the same block type that was originally placed?
                             if (!blockInfoFromList.blockId.equals(blockIdInWorld)) {
