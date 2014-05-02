@@ -176,7 +176,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
             if (unknownBlocksFound != null && unknownBlocksFound.size() > 0) {
 
-                if (!settings.autoRemoveUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksWithSignEnabled) {
+                if (!settings.autoRemoveUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksEnabled && !settings.autoReplaceUnknownBlocksWithSignEnabled && !settings.autoAssignUnknownBlocksToOmniscientFakePlayerEnabled) {
                     unknownBlocksFound.clear();
 
                     unknownBlocksProcessingState.set(0);

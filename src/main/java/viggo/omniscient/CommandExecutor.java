@@ -208,6 +208,22 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 //                return blocksRadius(sender, args);
 //            }
 
+            if (isCommand(args, r, "settings", "dump")) {
+
+                Reflections reflections = new Reflections("viggo.omniscient");
+
+                //reflections.
+
+                //final Set<Field> allFields = getAllFields(Settings.class);
+//                for (Field field : allFields) {
+//                    plugin.logger.logInfo(field.getName() + ": " + field.toString());
+//                }
+
+                plugin.logger.logInfo(plugin.settings.maximumUnknownBlocksToProcessPerTick + "");
+
+                return true;
+            }
+
             if (isCommand(args, r, "sign")) {
                 final Player player = sender.getServer().getPlayer(sender.getName());
 //                final ItemStack itemOnCursor = player.getItemOnCursor();
