@@ -783,7 +783,7 @@ public class Plugin extends JavaPlugin implements Listener {
             BlockLimit blockLimit = null;
             int limit = -1;
 
-            if (blockLimits.containsKey(blockInfoRemoved.blockId)) {
+            if (blockInfoRemoved != null && blockLimits.containsKey(blockInfoRemoved.blockId)) {
                 blockLimit = blockLimits.get(blockInfoRemoved.blockId);
                 limit = blockLimit.limit;
             }
