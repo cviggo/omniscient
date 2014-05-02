@@ -1,9 +1,6 @@
 package viggo.omniscient;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
@@ -12,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -23,6 +21,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -64,14 +65,6 @@ public class Plugin extends JavaPlugin implements Listener {
         logger.logInfo("Disable invoked. Stopping engines.");
         setState(PluginState.Disabled);
 
-        if (databaseEngine != null) {
-            try {
-                databaseEngine.stop(WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
         if (worldScannerEngine != null) {
             try {
                 worldScannerEngine.stop(WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS);
@@ -79,6 +72,19 @@ public class Plugin extends JavaPlugin implements Listener {
                 e.printStackTrace();
             }
         }
+
+        if (databaseEngine != null) {
+
+            while (true) {
+                try {
+                    databaseEngine.stop(1000);
+                    break;
+                } catch (InterruptedException e) {
+                    getServer().broadcastMessage(ChatColor.RED + "Waiting for Omniscient Database Engine to finish. Please hold on!");
+                }
+            }
+        }
+
 
         logger.logInfo("Disabled");
     }
@@ -126,20 +132,20 @@ public class Plugin extends JavaPlugin implements Listener {
 
                     if (getState() != PluginState.Running) {
 
-                        String message;
+                        String message = ChatColor.RED + "";
 
                         switch (getState()) {
 
                             case SafetyModeEmptyBlockInfo:
 
-                                message =
+                                message +=
                                         "Omniscient is in safety mode because information about limited blocks could not be loaded."
                                                 + " This is a normal event when first starting to use Omniscient. If you just started using Omniscient:  " +
                                                 "issue the command \"/omni reload ignoreEmptyBlockInfo\"";
                                 break;
 
                             default:
-                                message = String.format("Omniscient is in %s state. ", getState().toString());
+                                message += String.format("Omniscient is in %s state. ", getState().toString());
                                 break;
                         }
 
@@ -321,9 +327,22 @@ public class Plugin extends JavaPlugin implements Listener {
             @Override
             public void run() {
                 try {
+
+                    if (databaseEngine.getState() != DatabaseEngine.DataBaseEngineState.Running) {
+                        setState(PluginState.DatabaseConnectionPending);
+                        return;
+                    } else {
+                        if (state == PluginState.DatabaseConnectionPending) {
+                            setState(PluginState.Running);
+                            return;
+                        }
+                    }
+
                     if (settings.syncRemovedBlocksPeriodicallyEnabled) {
                         syncRemovedBlocks(null);
                     }
+
+                    //final long playerBlockBytes = MemoryMeasurer.measureBytes(playerBlocks);
 
                 } catch (Throwable t) {
                     logger.logSevere(t);
@@ -537,11 +556,15 @@ public class Plugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerInteractEvent(PlayerInteractEvent event) {
 
-        if (this.getState() != PluginState.Running) {
-            return;
-        }
+//        if (this.getState() != PluginState.Running) {
+//            return;
+//        }
 
         try {
+
+            if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+                return;
+            }
 
             if (event.getPlayer().getItemInHand().getTypeId() != 288) {
                 return;
@@ -661,10 +684,6 @@ public class Plugin extends JavaPlugin implements Listener {
 
         ArrayList<BlockInfo> blockList = map.get(originallyPlacedBlockInfo.blockId);
 
-
-        // TODO: seems rather redundant to check again, we know that a player has that block at given position...
-        // but we need to find it in the list ofc.
-
         int x = block.getX();
         int y = block.getY();
         int z = block.getZ();
@@ -700,12 +719,13 @@ public class Plugin extends JavaPlugin implements Listener {
             if (originallyPlacedBlockInfo.placedBy.equals(player.getName())) {
                 // players own block
 
-                String remainingStr = blockLimit != null ? (limit - blockList.size()) + "" : "unknown";
+                String remainingStr = (blockLimit != null ? (limit - blockList.size()) + "" : "unknown");
 
                 player.sendMessage(
-                        "Removed " + blockLimit != null ? blockLimit.blockDisplayName : "unknown"
+                        "Removed " + (blockLimit != null ? blockLimit.blockDisplayName : "unknown")
                                 + ". You now have " + remainingStr + " remaining."
                 );
+
             } else {
 
 
@@ -824,7 +844,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
             ArrayList<BlockInfo> blockList = map.get(blockId);
 
-            if ((blockList.size() + 1) > limit) {
+            if ((blockList.size() + 1) > limit && !event.getPlayer().isOp()) {
                 event.setCancelled(true);
 
                 if (settings.enablePlayerInfoOnBlockEvents) {
@@ -866,7 +886,11 @@ public class Plugin extends JavaPlugin implements Listener {
 //                return false;
 //            }
 
+
+            final Date begin = new Date();
+
             state = PluginState.Synchronizing;
+            int totalBlocksSynced = 0;
 
             Set<String> playerNames = playerBlocks.keySet();
             for (String playerName : playerNames) {
@@ -890,9 +914,9 @@ public class Plugin extends JavaPlugin implements Listener {
 
 
                         if (blockIdInWorld == null/* || */) {
-                            logger.logInfo("Found missing block at "
-                                            + String.format("%s:%d.%d.%d", blockInfoFromList.world, blockInfoFromList.x, blockInfoFromList.y, blockInfoFromList.z)
-                            );
+//                            logger.logInfo("Found missing block at "
+//                                            + String.format("%s:%d.%d.%d", blockInfoFromList.world, blockInfoFromList.x, blockInfoFromList.y, blockInfoFromList.z)
+//                            );
 
                             playerToBlockCoordsMap.remove(blockKey);
                             databaseEngine.deleteBlockInfo(blockInfoFromList);
@@ -904,10 +928,19 @@ public class Plugin extends JavaPlugin implements Listener {
                             }
                         }
 
+                        totalBlocksSynced++;
                     }
 
                 }
             }
+
+            final Date end = new Date();
+            logger.logInfo(String.format(
+                    "Omniscient synchronized %d player blocks in a total of %d msec",
+                    totalBlocksSynced,
+                    (end.getTime() - begin.getTime())
+            ));
+
 
             state = PluginState.Running;
             return true;
@@ -940,14 +973,8 @@ public class Plugin extends JavaPlugin implements Listener {
             String worldName = event.getBlock().getWorld().getName();
             String blockId = getBlockIdFromBlock(block);
 
-//            // skip if block is not limited
-//            if (!blockLimits.containsKey(blockId)) {
-
-                // do not track vanilla / mined blocks
-                if (!settings.blockStatsEnabled || block.getType().getId() < 256) {
-                    return;
-                }
-
+            // do not track vanilla / mined blocks
+            if (settings.blockStatsEnabled) {
                 // add to block stats
                 if (blockStats.containsKey(blockId)) {
                     BlockStat blockStat = blockStats.get(blockId);
@@ -959,15 +986,15 @@ public class Plugin extends JavaPlugin implements Listener {
                     blockStats.put(blockId, blockStat);
                     databaseEngine.setBlockStat(blockStat);
                 }
-
-            //return;
-            // }
+            }
 
             processLimitedBlockRemoval(block, blockId, worldName, event.getPlayer());
 
         } catch (Throwable t) {
             logger.logSevere(t, event.getPlayer());
         }
+
+
     }
 
     public void messageIfDebugSender(CommandSender sender, String message) {
@@ -1045,49 +1072,50 @@ public class Plugin extends JavaPlugin implements Listener {
         return false;
     }
 
-    public void setUnknowBlocksToBeProcessed(ArrayList<BlockInfo> unknownBlocksFound) {
+    public boolean setUnknowBlocksToBeProcessed(ArrayList<BlockInfo> unknownBlocksFound) {
 
         if (unknownBlocksFound.size() > settings.maximumUnknownBlocksToProcessBeforeSafetySwitch) {
 
-            // HACK: only dump if config says so!
-            getServer().broadcastMessage("BIG UB detected: " + unknownBlocksFound.size());
             setState(PluginState.SafetyModeTooManyUnknownBlocksFound);
 
-//            final String dumpLogFilename = String.format("%d.unknownBlocksDump.txt", new Date().getTime());
-//            final String dumpLogFilePath = getDataFolder().toString() + File.separator + dumpLogFilename;
-//
-//
-//            try {
-//                PrintWriter out = new PrintWriter(dumpLogFilePath);
-//
-//                for (BlockInfo blockInfo : unknownBlocksFound) {
-//
-//                    String message = blockInfo.blockId + ":" + getBlockKeyFromInfo(blockInfo);
-//
-//
-//                    out.println(message);
-//                }
-//                out.flush();
-//                out.close();
-//            } catch (FileNotFoundException e) {
-//                e.printStackTrace();
-//            }
-//
-//
-            return;
+            if (settings.dumpUnknownBlockInfoToDiskOnSafetySwitch) {
+                final String dumpLogFilename = String.format("%d.unknownBlocksDump.txt", new Date().getTime());
+                final String dumpLogFilePath = getDataFolder().toString() + File.separator + dumpLogFilename;
+
+
+                try {
+                    PrintWriter out = new PrintWriter(dumpLogFilePath);
+
+                    for (BlockInfo blockInfo : unknownBlocksFound) {
+
+                        String message = blockInfo.blockId + ":" + getBlockKeyFromInfo(blockInfo);
+
+
+                        out.println(message);
+                    }
+                    out.flush();
+                    out.close();
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+
+            }
+
+            return false;
         }
 
         this.unknownBlocksFound.addAll(unknownBlocksFound);
+
+        return true;
     }
 
     public PluginState getState() {
-
-
         return state;
     }
 
     public void setState(PluginState state) {
-        logger.logInfo(String.format("State transition %s to %s", this.state, state));
+        logger.logInfo(String.format("Plugin state transition %s to %s", this.state, state));
         this.state = state;
     }
 }

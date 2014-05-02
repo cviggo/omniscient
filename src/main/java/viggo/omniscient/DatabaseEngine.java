@@ -26,6 +26,7 @@ public class DatabaseEngine implements Runnable {
     private ConcurrentLinkedQueue<UpdateTask<BlockStat>> blockStatsToUpdate;
     private ConcurrentLinkedQueue<UpdateTask<BlockLimit>> blockLimitsToUpdate;
     private boolean doExitEngine;
+    private volatile DataBaseEngineState state;
 
     DatabaseEngine(Plugin plugin, String dbHost, int dbPort, String dbCatalog, String dbUser, String dbPassword) {
 
@@ -39,6 +40,16 @@ public class DatabaseEngine implements Runnable {
         this.blockStatsToUpdate = new ConcurrentLinkedQueue<UpdateTask<BlockStat>>();
         this.blockLimitsToUpdate = new ConcurrentLinkedQueue<UpdateTask<BlockLimit>>();
         this.doExitEngine = false;
+        this.setState(DataBaseEngineState.Unknown);
+    }
+
+    public DataBaseEngineState getState() {
+        return state;
+    }
+
+    private void setState(DataBaseEngineState state) {
+        plugin.logger.logInfo(String.format("Database state transition %s to %s", this.state, state));
+        this.state = state;
     }
 
     public void stop(Integer waitForEngineToStopTimeoutMsecs) throws InterruptedException {
@@ -77,11 +88,17 @@ public class DatabaseEngine implements Runnable {
                         updateBlockStats();
                         updateBlockLimits();
 
+
+                        if (this.state != DataBaseEngineState.Running) {
+                            this.setState(DataBaseEngineState.Running);
+                        }
+
                         _lastRun = new Date();
                     }
                 }
 
             } catch (SQLException ex) {
+                this.setState(DataBaseEngineState.Error);
                 plugin.logger.logSevere("SQLException: " + ex.getMessage());
                 plugin.logger.logSevere("SQLState: " + ex.getSQLState());
                 plugin.logger.logSevere("VendorError: " + ex.getErrorCode());
@@ -110,6 +127,9 @@ public class DatabaseEngine implements Runnable {
         try {
 
             if (conn == null || conn.isClosed()) {
+
+                this.setState(DataBaseEngineState.Connecting);
+
                 plugin.logger.logInfo(String.format("Connecting to database: %s:%d", dbHost, dbPort));
 
                 conn =
@@ -127,6 +147,8 @@ public class DatabaseEngine implements Runnable {
             return true;
 
         } catch (Throwable t) {
+
+            this.setState(DataBaseEngineState.ConnectionError);
             plugin.logger.logSevere(t);
             return false;
         }
@@ -259,7 +281,9 @@ public class DatabaseEngine implements Runnable {
                 }
             }
 
+            plugin.logger.logInfo("Begin info batch");
             int[] results = statement.executeBatch();
+            plugin.logger.logInfo("End info batch");
 
             plugin.logger.logInfo(String.format("processed %d block infos", results.length));
         }
@@ -302,13 +326,13 @@ public class DatabaseEngine implements Runnable {
         }
     }
 
-    public boolean hasUnsavedItems() {
-        return blockInfosToUpdate.size() > 0;
-    }
-
     public void setBlockInfo(BlockInfo blockInfo) {
         blockInfosToUpdate.add(new UpdateTask<BlockInfo>(blockInfo, UpdateType.Save));
     }
+
+//    public boolean hasUnsavedItems() {
+//        return blockInfosToUpdate.size() > 0;
+//    }
 
     public void deleteBlockInfo(BlockInfo blockInfo) {
         blockInfosToUpdate.add(new UpdateTask<BlockInfo>(blockInfo, UpdateType.Delete));
@@ -452,6 +476,14 @@ public class DatabaseEngine implements Runnable {
         }
 
         return blockStats;
+    }
+
+    enum DataBaseEngineState {
+        Unknown,
+        Connecting,
+        ConnectionError,
+        Error,
+        Running
     }
 
 

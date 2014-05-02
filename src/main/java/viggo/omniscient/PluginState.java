@@ -7,5 +7,5 @@ public enum PluginState {
     ReloadError,
     SafetyModeEmptyBlockInfo,
     SafetyModeTooManyUnknownBlocksFound,
-    Synchronizing, Running
+    Synchronizing, DatabaseConnectionPending, Running
 }

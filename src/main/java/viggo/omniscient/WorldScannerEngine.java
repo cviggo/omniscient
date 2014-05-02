@@ -138,12 +138,15 @@ public class WorldScannerEngine implements Runnable {
                             processedBlocks, elapsedMsecs, (double) processedBlocks / ((double) elapsedMsecs / 1000.0), unknownBlocksFound.size()));
 
 
-                    plugin.setUnknowBlocksToBeProcessed(unknownBlocksFound);
+                    final boolean unknownBlocksSubmissionSuccess = plugin.setUnknowBlocksToBeProcessed(unknownBlocksFound);
 
+                    if (!unknownBlocksSubmissionSuccess) {
+                        plugin.logger.logWarn("WorldScannerEngine is shutting down");
+                        return; // die engine
+                    }
 
                     // allow for more scheduled work to be queued
                     plugin.worldScannerState.set(0);
-
                 }
 
                 Thread.sleep(1000);

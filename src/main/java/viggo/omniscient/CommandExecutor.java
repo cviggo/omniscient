@@ -40,11 +40,14 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             String actual = args[i];
             String expected = expectedCommands[i];
             if (!actual.equals(expected)) {
+                //plugin.logger.logInfo("NEX: " + expectedCommands[0]);
                 return false;
             }
         }
 
-        for (int i = args.length - expectedCommands.length; i < args.length && i >= 0; i++) {
+        int remainingCommandsCnt = args.length - expectedCommands.length;
+
+        for (int i = args.length - remainingCommandsCnt; i < args.length && i >= 0; i++) {
             remainingCommands.remainingCommands.add(args[i]);
         }
 
@@ -80,6 +83,91 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             if (isCommand(args, r, "dev", "disable")) {
                 plugin.setDebugPlayer(sender.getServer().getPlayer(sender.getName()), false);
                 sender.sendMessage("dev disabled");
+                return true;
+            }
+
+            if (isCommand(args, r, "test", "placeBlocks") /*&& r.remainingCommands.size() == 3*/) {
+                final int dist = r.getInt(0);
+                final int id = r.getInt(1);
+                final int blockSubValue = r.getInt(2);
+                final String blockId = id + ":" + blockSubValue;
+
+                boolean assignPlayer = r.remainingCommands.size() == 4 && r.getBoolean(3);
+
+                final Player player = sender.getServer().getPlayer(sender.getName());
+                final Location location = player.getLocation();
+                final World world = location.getWorld();
+
+                final int x = (int) location.getX();
+                final int y = (int) location.getY();
+                final int z = (int) location.getZ();
+
+                String playerName = player.getName();
+
+                // make sure there is a map for the player
+                if (!plugin.playerBlocks.containsKey(playerName)) {
+                    plugin.playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
+                }
+
+                Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(playerName);
+
+                // make sure there is a list available for the type of block
+                if (!map.containsKey(blockId)) {
+                    ArrayList<BlockInfo> list = new ArrayList<BlockInfo>();
+                    map.put(blockId, list);
+                }
+
+                ArrayList<BlockInfo> blockList = map.get(blockId);
+
+
+                for (int ix = -dist; ix < dist; ix++) {
+                    for (int iy = -dist; iy < dist; iy++) {
+                        for (int iz = -dist; iz < dist; iz++) {
+                            final Block block = world.getBlockAt(x + ix, (255 - dist) + iy, z + iz);
+                            block.setTypeIdAndData(id, (byte) blockSubValue, false);
+
+                            if (assignPlayer) {
+                                BlockInfo blockInfo = new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), playerName, new Date());
+
+                                // add to list of blocks
+                                blockList.add(blockInfo);
+
+                                // add to coordinate to player map
+                                plugin.playerToBlockCoordsMap.put(plugin.getBlockKeyFromInfo(blockInfo), blockInfo);
+
+                                // add to database
+                                plugin.databaseEngine.setBlockInfo(blockInfo);
+                            }
+                        }
+                    }
+                }
+
+                sender.sendMessage("placed blocks");
+                return true;
+            }
+
+            if (isCommand(args, r, "test", "removeBlocks") && r.remainingCommands.size() == 1) {
+                final int dist = r.getInt(0);
+//                final int blockId = r.getInt(1);
+//                final int blockSubValue = r.getInt(2);
+
+                final Player player = sender.getServer().getPlayer(sender.getName());
+                final Location location = player.getLocation();
+                final World world = location.getWorld();
+
+                final int x = (int) location.getX();
+                final int y = (int) location.getY();
+                final int z = (int) location.getZ();
+
+                for (int ix = -dist; ix < dist; ix++) {
+                    for (int iy = -dist; iy < dist; iy++) {
+                        for (int iz = -dist; iz < dist; iz++) {
+                            world.getBlockAt(x + ix, (255 - dist) + iy, z + iz).setType(Material.AIR);
+                        }
+                    }
+                }
+
+                sender.sendMessage("removed blocks");
                 return true;
             }
 
@@ -376,8 +464,9 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 
             if (isCommand(args, r, "state")) {
                 sender.sendMessage(
-                        String.format("Last processed items %d secs ago.",
-                                (new Date().getTime() - plugin.databaseEngine._lastRun.getTime()) / 1000
+                        String.format("Last processed items %d secs ago. DBE state: %s",
+                                (new Date().getTime() - plugin.databaseEngine._lastRun.getTime()) / 1000,
+                                plugin.databaseEngine.getState()
                         )
                 );
 

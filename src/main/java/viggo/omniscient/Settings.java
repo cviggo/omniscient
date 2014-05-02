@@ -176,29 +176,32 @@ public class Settings implements Serializable {
                     throw new Exception("Null range detected in string with ranges in configuration: " + path);
                 }
 
-                if (range.contains("-")) {
-                    // its an actual range with '-'
-
-                    final String[] rangeParts = range.split("-");
-                    if (rangeParts.length != 2) {
-                        throw new Exception("Invalid range detected in string with ranges in configuration: " + path);
-                    }
-
-                    int begin = Integer.parseInt(rangeParts[0]);
-                    int end = Integer.parseInt(rangeParts[1]);
-
-                    for (int i = begin; i <= end; i++) {
-                        set.add(i);
-                    }
-                } else {
-                    set.add(Integer.parseInt(range));
-                }
+                parseRange(path, set, range);
             }
         } else {
-            // only one value
-            set.add(Integer.parseInt(string));
+            parseRange(path, set, string);
         }
 
         return set;
+    }
+
+    private void parseRange(String path, Set<Integer> set, String range) throws Exception {
+        if (range.contains("-")) {
+            // its an actual range with '-'
+
+            final String[] rangeParts = range.split("-");
+            if (rangeParts.length != 2) {
+                throw new Exception("Invalid range detected in string with ranges in configuration: " + path);
+            }
+
+            int begin = Integer.parseInt(rangeParts[0]);
+            int end = Integer.parseInt(rangeParts[1]);
+
+            for (int i = begin; i <= end; i++) {
+                set.add(i);
+            }
+        } else {
+            set.add(Integer.parseInt(range));
+        }
     }
 }
