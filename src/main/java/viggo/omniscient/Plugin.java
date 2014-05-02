@@ -1187,5 +1187,9 @@ public class Plugin extends JavaPlugin implements Listener {
         logger.logInfo(String.format("Plugin state transition %s to %s", this.state, state));
         this.state = state;
     }
+
+    public boolean hasUnknownBlocksQueued() {
+        return unknownBlocksFound.size() > 0;
+    }
 }
 

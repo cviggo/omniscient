@@ -64,6 +64,11 @@ public class WorldScannerEngine implements Runnable {
 
             try {
 
+                // make sure to never feed more into the queue than server can synchronously process
+                while (plugin.hasUnknownBlocksQueued()) {
+                    Thread.sleep(1000);
+                }
+
                 final Date begin = new Date();
 
                 long processedBlocks = 0;
