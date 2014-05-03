@@ -59,6 +59,7 @@ public class Plugin extends JavaPlugin implements Listener {
     private Set<String> debugPlayers;
     private volatile PluginState state;
     private BukkitTask tickSchedule;
+    private ProtocolHook protocolHook;
 
 
     public void onDisable() {
@@ -120,8 +121,26 @@ public class Plugin extends JavaPlugin implements Listener {
             setState(PluginState.Running);
         }
 
+
         logger.logInfo("Enabled: " + getDescription().getVersion() + ", Current state is: " + state);
     }
+
+    @Override
+    public void onLoad() {
+
+        try {
+            final Class<?> aClass = Class.forName("com.comphenix.protocol.ProtocolLibrary", false, this.getClass().getClassLoader());
+        } catch (ClassNotFoundException e) {
+            getLogger().warning("Omniscient cannot listen to network events as ProtocolLib was not found. Add ProtocolLib to plugins to fix.");
+            return;
+        }
+
+        this.protocolHook = new ProtocolHook(this);
+        protocolHook.load();
+
+        getLogger().info("Added packet listener");
+    }
+
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {
         new BukkitRunnable() {

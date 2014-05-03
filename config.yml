@@ -9,6 +9,10 @@ dbPassword: typePasswordHere
 autoWhiteListOff: true
 autoWhiteListOffDelaySeconds: 120
 
+# ----- Sound broadcast disabling -----
+disableWitherSound: true
+disableEnderDragonSound: false
+
 # ----- automatic synchronization of removed blocks -----
 # players may use an unsupported tool to pickup a block a limited block. What ever the cause may be,
 # omniscient can scan for the blocks it knows and remove the registration for the ones that no longer matches.

@@ -39,6 +39,8 @@ public class Settings implements Serializable {
     public int maximumUnknownBlocksToProcessBeforeSafetySwitch;
     public boolean dumpUnknownBlockInfoToDiskOnSafetySwitch;
     public boolean autoAssignUnknownBlocksToOmniscientFakePlayerEnabled;
+    public boolean disableWitherSound;
+    public boolean disableEnderDragonSound;
     private Plugin plugin;
 
     public Settings(Plugin plugin) throws Exception {
@@ -107,6 +109,9 @@ public class Settings implements Serializable {
         this.maximumUnknownBlocksToProcessPerTick = getInt("maximumUnknownBlocksToProcessPerTick");
         this.maximumUnknownBlocksToProcessBeforeSafetySwitch = getInt("maximumUnknownBlocksToProcessBeforeSafetySwitch");
         this.dumpUnknownBlockInfoToDiskOnSafetySwitch = getBoolean("dumpUnknownBlockInfoToDiskOnSafetySwitch");
+
+        this.disableWitherSound = getBoolean("disableWitherSound");
+        this.disableEnderDragonSound = getBoolean("disableEnderDragonSound");
 
     }
 
