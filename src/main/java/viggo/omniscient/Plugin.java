@@ -821,7 +821,11 @@ public class Plugin extends JavaPlugin implements Listener {
 
 
                 // another players block
-                String toPlayer = String.format("Removed %s. %s now has %d remaining.", blockLimit.blockDisplayName, originallyPlacedBlockInfo.placedBy, (limit - blockList.size()));
+                String toPlayer = String.format("Removed %s. %s now has %d remaining.",
+                        blockLimit != null ? blockLimit.blockDisplayName : "unknown",
+                        originallyPlacedBlockInfo != null ? originallyPlacedBlockInfo.placedBy : "unknown",
+                        (limit - blockList.size()));
+
                 player.sendMessage(toPlayer);
 
                 // is playerNameWhomPlacedTheBlock online - if so, tell the player?

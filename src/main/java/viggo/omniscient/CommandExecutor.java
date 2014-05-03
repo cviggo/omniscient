@@ -86,6 +86,16 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
+            if (isCommand(args, r, "disable")) {
+                plugin.onDisable();
+                return true;
+            }
+
+            if (isCommand(args, r, "enable")) {
+                plugin.onEnable();
+                return true;
+            }
+
             if (isCommand(args, r, "test", "placeBlocks") /*&& r.remainingCommands.size() == 3*/) {
                 final int dist = r.getInt(0);
                 final int id = r.getInt(1);

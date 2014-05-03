@@ -7,6 +7,7 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
 
 public class ProtocolHook {
 
@@ -27,13 +28,19 @@ public class ProtocolHook {
             @Override
             public void onPacketSending(PacketEvent event) {
 
-                final int currentId = event.getPacket().getType().getCurrentId();
+                final StructureModifier<Integer> integers = event.getPacket().getIntegers();
 
-                if (currentId == PacketType.UNKNOWN_PACKET || omniPlugin.settings == null) {
+                if (integers.size() < 1) {
                     return;
                 }
 
-                switch (currentId) {
+                int id = integers.read(0);
+
+                if (omniPlugin.settings == null) {
+                    return;
+                }
+
+                switch (id) {
                     case 1013: // wither
                         if (omniPlugin.settings.disableWitherSound) {
                             event.setCancelled(true);

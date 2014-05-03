@@ -246,6 +246,8 @@ public class DatabaseEngine implements Runnable {
                 BlockInfo blockInfo = updateTask.t;
                 String sql;
 
+                int currentTailedValues;
+
                 switch (updateTask.type) {
 
                     case Save:
@@ -268,14 +270,16 @@ public class DatabaseEngine implements Runnable {
                                 time
                         );
 
-                        int currentTailedValues = 0;
+                        currentTailedValues = 0;
 
                         while (blockInfosToUpdate.size() > 0) {
 
-                            updateTask = blockInfosToUpdate.poll();
-                            if (updateTask == null || updateTask.t == null) {
+                            updateTask = blockInfosToUpdate.peek(); // just peek to see if the next item is also a save
+                            if (updateTask == null || updateTask.t == null && updateTask.type == UpdateType.Save) {
                                 break;
                             }
+
+                            blockInfosToUpdate.poll(); // remove from queue
 
                             blockInfo = updateTask.t;
 
@@ -301,13 +305,40 @@ public class DatabaseEngine implements Runnable {
 
                     case Delete:
                         sql = String.format(
-                                "DELETE FROM BlockInfo WHERE (`world` = '%s' AND `x` = %d AND `y` = %d AND `z` = %d)",
+                                "DELETE FROM BlockInfo WHERE (`world`, `x`, `y`, `z`) IN ( (%s, %d, %d, %d)",
                                 blockInfo.world,
                                 blockInfo.x,
                                 blockInfo.y,
                                 blockInfo.z
                         );
 
+                        currentTailedValues = 0;
+
+                        while (blockInfosToUpdate.size() > 0) {
+
+                            updateTask = blockInfosToUpdate.peek(); // just peek to see if the next item is also a delete
+                            if (updateTask == null || updateTask.t == null && updateTask.type == UpdateType.Delete) {
+                                break;
+                            }
+
+                            blockInfosToUpdate.poll(); // remove from queue
+
+                            blockInfo = updateTask.t;
+
+                            sql += String.format(
+                                    ", (%s, %d, %d, %d)",
+                                    blockInfo.world,
+                                    blockInfo.x,
+                                    blockInfo.y,
+                                    blockInfo.z
+                            );
+
+                            if (currentTailedValues++ > 500) {
+                                break;
+                            }
+                        }
+
+                        sql += ")";
                         statement.addBatch(sql);
                         break;
                 }
