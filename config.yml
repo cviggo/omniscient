@@ -12,6 +12,7 @@ autoWhiteListOffDelaySeconds: 120
 # ----- Sound broadcast disabling -----
 disableWitherSound: false
 disableEnderDragonSound: false
+broadcastOnSoundDisablingEnabled: false
 
 # ----- interaction tool -----
 interactionToolEnabled: false

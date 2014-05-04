@@ -44,12 +44,20 @@ public class ProtocolHook {
                     case 1013: // wither
                         if (omniPlugin.settings.disableWitherSound) {
                             event.setCancelled(true);
+
+                            if (omniPlugin.settings.broadcastOnSoundDisablingEnabled) {
+                                omniPlugin.broadcastQueue.add("Wither spawned");
+                            }
                         }
                         break;
 
                     case 1018: // ender dragon
                         if (omniPlugin.settings.disableEnderDragonSound) {
                             event.setCancelled(true);
+
+                            if (omniPlugin.settings.broadcastOnSoundDisablingEnabled) {
+                                omniPlugin.broadcastQueue.add("Ender dragon killed");
+                            }
                         }
                         break;
                 }

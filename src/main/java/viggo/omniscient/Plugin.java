@@ -40,17 +40,15 @@ public class Plugin extends JavaPlugin implements Listener {
     public WorldScannerEngine worldScannerEngine;
     public AtomicInteger unknownBlocksProcessingState = new AtomicInteger();
     public AtomicInteger worldScannerState = new AtomicInteger();
-
+    public ConcurrentLinkedQueue<String> broadcastQueue;
     /**
      * Map from blockKey to player name. This is used to perform a lookup from a world position to a player name and info.
      */
     ConcurrentHashMap<String, BlockInfo> playerToBlockCoordsMap;
-
     /**
      * Map from player name to Map of block types, which then maps to a list of block info.
      */
     Map<String, Map<String, ArrayList<BlockInfo>>> playerBlocks;
-
     Map<String, BlockLimit> blockLimits;
     Map<String, BlockStat> blockStats;
     private ConcurrentLinkedQueue<BlockInfo> unknownBlocksFound;
@@ -60,7 +58,6 @@ public class Plugin extends JavaPlugin implements Listener {
     private volatile PluginState state;
     private BukkitTask tickSchedule;
     private ProtocolHook protocolHook;
-
 
     public void onDisable() {
         logger.logInfo("Disable invoked. Stopping engines.");
@@ -451,6 +448,11 @@ public class Plugin extends JavaPlugin implements Listener {
                 try {
 
                     processUnknownBlocks();
+
+                    while (broadcastQueue.size() > 0) {
+                        final String broadcastString = broadcastQueue.poll();
+                        getServer().broadcastMessage(broadcastString);
+                    }
 
                 } catch (Throwable t) {
                     logger.logSevere(t);

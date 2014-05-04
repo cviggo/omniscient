@@ -44,7 +44,9 @@ public class Settings implements Serializable {
     public boolean interactionToolEnabled;
     public int interactionToolItemId;
     public int interactionToolItemSubValue;
+    public boolean broadcastOnSoundDisablingEnabled;
     private Plugin plugin;
+
 
     public Settings(Plugin plugin) throws Exception {
 
@@ -116,10 +118,12 @@ public class Settings implements Serializable {
 
         this.disableWitherSound = getBoolean("disableWitherSound");
         this.disableEnderDragonSound = getBoolean("disableEnderDragonSound");
+        this.broadcastOnSoundDisablingEnabled = getBoolean("broadcastOnSoundDisablingEnabled");
 
         this.interactionToolEnabled = getBoolean("interactionToolEnabled");
         this.interactionToolItemId = getInt("interactionToolItemId");
         this.interactionToolItemSubValue = getInt("interactionToolItemSubValue");
+
     }
 
     private void verifyKeysPresent() throws Exception {
