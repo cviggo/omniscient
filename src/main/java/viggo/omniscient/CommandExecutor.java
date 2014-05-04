@@ -319,7 +319,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             }
 
             if (isCommand(args, r, "reload", "ignoreEmptyBlockInfo")) {
-                boolean wasReloadStarted = plugin.beginReload(sender, true);
+                boolean wasReloadStarted = plugin.beginReload(sender, true, false);
                 if (!wasReloadStarted) {
                     sender.sendMessage("Reloaded could not be started. Perhaps try again.");
                 } else {
@@ -330,7 +330,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
             }
 
             if (isCommand(args, r, "reload")) {
-                boolean wasReloadStarted = plugin.beginReload(sender, false);
+                boolean wasReloadStarted = plugin.beginReload(sender, false, false);
                 if (!wasReloadStarted) {
                     sender.sendMessage("Reloaded could not be started. Perhaps try again.");
                 } else {

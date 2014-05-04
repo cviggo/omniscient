@@ -41,6 +41,9 @@ public class Settings implements Serializable {
     public boolean autoAssignUnknownBlocksToOmniscientFakePlayerEnabled;
     public boolean disableWitherSound;
     public boolean disableEnderDragonSound;
+    public boolean interactionToolEnabled;
+    public int interactionToolItemId;
+    public int interactionToolItemSubValue;
     private Plugin plugin;
 
     public Settings(Plugin plugin) throws Exception {
@@ -54,16 +57,17 @@ public class Settings implements Serializable {
         }
     }
 
-    public void load() throws Exception {
+    public void load(boolean saveNewDefaults) throws Exception {
 
         // make sure a config exists
         plugin.saveDefaultConfig();
 
-        // make sure that config is up to date
-        plugin.getConfig().options().copyDefaults(true);
 
-        // save config to persist any defaults added
-        //plugin.saveConfig();
+        // save config to persist any new defaults added
+        if (saveNewDefaults) {
+            plugin.getConfig().options().copyDefaults(true);
+            plugin.saveConfig();
+        }
 
         // reload config
         plugin.reloadConfig();
@@ -113,6 +117,9 @@ public class Settings implements Serializable {
         this.disableWitherSound = getBoolean("disableWitherSound");
         this.disableEnderDragonSound = getBoolean("disableEnderDragonSound");
 
+        this.interactionToolEnabled = getBoolean("interactionToolEnabled");
+        this.interactionToolItemId = getInt("interactionToolItemId");
+        this.interactionToolItemSubValue = getInt("interactionToolItemSubValue");
     }
 
     private void verifyKeysPresent() throws Exception {

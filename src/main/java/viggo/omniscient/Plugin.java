@@ -106,7 +106,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
         // reload synchronously
         setState(PluginState.Reloading);
-        if (!reload(null, false)) {
+        if (!reload(null, false, true)) {
             logger.logSevere("Failed to load. Please fix the problem (likely shown above).");
             startNotifyScheduler(10);
         } else {
@@ -464,7 +464,7 @@ public class Plugin extends JavaPlugin implements Listener {
         return String.format("%s:%d.%d.%d", blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z);
     }
 
-    public boolean beginReload(final CommandSender sender, final boolean ignoreEmptyBlocks) {
+    public boolean beginReload(final CommandSender sender, final boolean ignoreEmptyBlocks, final boolean saveNewDefaultConfigs) {
 
         setState(PluginState.Reloading);
 
@@ -504,7 +504,7 @@ public class Plugin extends JavaPlugin implements Listener {
                         @Override
                         public void run() {
 
-                            final boolean wasReloadedWithSuccess = reload(sender, ignoreEmptyBlocks);
+                            final boolean wasReloadedWithSuccess = reload(sender, ignoreEmptyBlocks, saveNewDefaultConfigs);
 
                             new BukkitRunnable() {
 
@@ -535,7 +535,7 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    private boolean reload(CommandSender sender, boolean ignoreEmptyBlocks) {
+    private boolean reload(CommandSender sender, boolean ignoreEmptyBlocks, boolean saveNewDefaultConfigs) {
 
         try {
 
@@ -544,7 +544,7 @@ public class Plugin extends JavaPlugin implements Listener {
             debugPlayers = new HashSet<String>();
 
             logger.logInfo("reloading settings...");
-            if (!reloadSettings()) {
+            if (!reloadSettings(saveNewDefaultConfigs)) {
                 logger.logSevere("failed to reload settings. ");
                 return false;
             }
@@ -657,7 +657,8 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            if (event.getPlayer().getItemInHand().getTypeId() != 288) {
+            // TODO: include damage / sub value
+            if (!settings.interactionToolEnabled || event.getPlayer().getItemInHand().getTypeId() != settings.interactionToolItemId) {
                 return;
             }
 
@@ -1100,13 +1101,13 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    private boolean reloadSettings() {
+    private boolean reloadSettings(boolean saveNewDefaultConfigs) {
 
         try {
 
             /* load values from config */
             settings = new Settings(this);
-            settings.load();
+            settings.load(saveNewDefaultConfigs);
 
             logger.logInfo("reloadSettings done");
 
