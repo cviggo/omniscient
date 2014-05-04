@@ -82,7 +82,7 @@ public class DatabaseEngine implements Runnable {
 
                 synchronized (connectionLock) {
 
-                    plugin.logger.logInfo(String.format("DB Queues: Infos: %d, Stats: %d, Stats: %d", blockInfosToUpdate.size(), blockStatsToUpdate.size(), blockLimitsToUpdate.size()));
+                    //plugin.logger.logInfo(String.format("DB Queues: Infos: %d, Stats: %d, Stats: %d", blockInfosToUpdate.size(), blockStatsToUpdate.size(), blockLimitsToUpdate.size()));
 
                     if (persistConnection()) {
 
