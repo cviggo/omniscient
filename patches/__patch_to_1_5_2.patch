@@ -1,0 +1,79 @@
+Index: plugin.yml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- plugin.yml	(revision 490607bb06d0ec6211f71286dae0960b8b153cd9)
++++ plugin.yml	(revision )
+@@ -1,6 +1,6 @@
+ name: Omniscient
+ main: viggo.omniscient.Plugin
+-version: 1.6.4-SNAPSHOT
++version: 1.5.2-SNAPSHOT
+ commands:
+   omni:
+     description: Omniscient
+\ No newline at end of file
+Index: omniscient.iml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- omniscient.iml	(revision 490607bb06d0ec6211f71286dae0960b8b153cd9)
++++ omniscient.iml	(revision )
+@@ -29,7 +29,7 @@
+         <SOURCES />
+       </library>
+     </orderEntry>
+-    <orderEntry type="library" name="Maven: org.bukkit:bukkit:1.6.4-R2.0" level="project" />
++    <orderEntry type="library" name="Maven: org.bukkit:bukkit:1.5.2-R1.0" level="project" />
+     <orderEntry type="library" name="Maven: mysql:mysql-connector-java:5.1.28" level="project" />
+     <orderEntry type="library" name="Maven: org.reflections:reflections:0.9.9-RC1" level="project" />
+     <orderEntry type="library" name="Maven: com.google.guava:guava:11.0.2" level="project" />
+Index: .idea/libraries/Maven__org_bukkit_bukkit_1_6_4_R2_0.xml
+===================================================================
+--- .idea/libraries/Maven__org_bukkit_bukkit_1_6_4_R2_0.xml	(revision 490607bb06d0ec6211f71286dae0960b8b153cd9)
++++ .idea/libraries/Maven__org_bukkit_bukkit_1_6_4_R2_0.xml	(revision 490607bb06d0ec6211f71286dae0960b8b153cd9)
+@@ -1,13 +0,0 @@
+-<component name="libraryTable">
+-  <library name="Maven: org.bukkit:bukkit:1.6.4-R2.0">
+-    <CLASSES>
+-      <root url="jar://$MAVEN_REPOSITORY$/org/bukkit/bukkit/1.6.4-R2.0/bukkit-1.6.4-R2.0.jar!/" />
+-    </CLASSES>
+-    <JAVADOC>
+-      <root url="jar://$MAVEN_REPOSITORY$/org/bukkit/bukkit/1.6.4-R2.0/bukkit-1.6.4-R2.0-javadoc.jar!/" />
+-    </JAVADOC>
+-    <SOURCES>
+-      <root url="jar://$MAVEN_REPOSITORY$/org/bukkit/bukkit/1.6.4-R2.0/bukkit-1.6.4-R2.0-sources.jar!/" />
+-    </SOURCES>
+-  </library>
+-</component>
+\ No newline at end of file
+Index: pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- pom.xml	(revision 490607bb06d0ec6211f71286dae0960b8b153cd9)
++++ pom.xml	(revision )
+@@ -6,7 +6,7 @@
+ 
+     <groupId>viggo</groupId>
+     <artifactId>omniscient</artifactId>
+-    <version>1.6.4-SNAPSHOT</version>
++    <version>1.5.2-SNAPSHOT</version>
+ 
+     <packaging>jar</packaging>
+ 
+@@ -21,8 +21,8 @@
+         <dependency>
+             <groupId>org.bukkit</groupId>
+             <artifactId>bukkit</artifactId>
+-            <version>1.6.4-R2.0</version>
+-            <!--<version>1.5.2-R1.0</version>-->
++            <!--<version>1.6.4-R2.0</version>-->
++            <version>1.5.2-R1.0</version>
+         </dependency>
+         <dependency>
+             <groupId>mysql</groupId>
+\ No newline at end of file
