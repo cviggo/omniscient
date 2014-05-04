@@ -40,7 +40,7 @@ public class Plugin extends JavaPlugin implements Listener {
     public WorldScannerEngine worldScannerEngine;
     public AtomicInteger unknownBlocksProcessingState = new AtomicInteger();
     public AtomicInteger worldScannerState = new AtomicInteger();
-    public ConcurrentLinkedQueue<String> broadcastQueue;
+    public ConcurrentLinkedQueue<String> broadcastQueue = new ConcurrentLinkedQueue<String>();
     /**
      * Map from blockKey to player name. This is used to perform a lookup from a world position to a player name and info.
      */
@@ -544,6 +544,7 @@ public class Plugin extends JavaPlugin implements Listener {
             unknownBlocksFound = new ConcurrentLinkedQueue<BlockInfo>();
             unknownBlocksProcessingState.set(0);
             debugPlayers = new HashSet<String>();
+            broadcastQueue = new ConcurrentLinkedQueue<String>();
 
             logger.logInfo("reloading settings...");
             if (!reloadSettings(saveNewDefaultConfigs)) {
