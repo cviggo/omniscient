@@ -440,6 +440,8 @@ public class Plugin extends JavaPlugin implements Listener {
         }.runTaskTimer(this, TICKS_PER_SECOND * delaySeconds, TICKS_PER_SECOND * intervalSeconds);
     }
 
+    private Date lastBroadcast = new Date();
+
     private BukkitTask createTickSchedule() {
         return new BukkitRunnable() {
 
@@ -449,10 +451,16 @@ public class Plugin extends JavaPlugin implements Listener {
 
                     processUnknownBlocks();
 
-                    while (broadcastQueue.size() > 0) {
+                    // HACK: broadcast once every 5 secs at most
+                    if (
+                            (new Date().getTime() - lastBroadcast.getTime()) > 5000
+                                    && broadcastQueue.size() > 0) {
                         final String broadcastString = broadcastQueue.poll();
                         getServer().broadcastMessage(broadcastString);
                     }
+
+                    broadcastQueue.clear();
+
 
                 } catch (Throwable t) {
                     logger.logSevere(t);
