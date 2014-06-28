@@ -862,8 +862,6 @@ public class Plugin extends JavaPlugin implements Listener {
             return;
         }
 
-        //logger.logInfo("block place event: "+ event.getBlock().getTypeId());
-
         if (this.getState() != PluginState.Running) {
 
             event.getPlayer().sendMessage("Omniscient is not processing events. " +
@@ -875,16 +873,27 @@ public class Plugin extends JavaPlugin implements Listener {
             return;
         }
 
-        if (event.isCancelled()) {
-            return;
-        }
-
         try {
 
-            messageIfDebugSender(event.getPlayer(), "placed a block: " + getBlockIdFromBlock(event.getBlock()) + ", with item in hand: " + event.getItemInHand().getTypeId());
+            messageIfDebugSender(event.getPlayer(), "placed a block: " + getBlockIdFromBlock(event.getBlock())
+                    + ", with item in hand: " + event.getItemInHand().getTypeId() + ":" + event.getItemInHand().getData().getData());
 
             Block block = event.getBlock();
-            String blockId = getBlockIdFromBlock(block);
+            //String blockId = getBlockIdFromBlock(block);
+
+            // HACK: support gregtech blocks
+            int blockId;
+            int blockSubValue;
+            if (event.getBlock().getType().getId() != 2271) {
+
+                blockId = block.getType().getId();
+                blockSubValue = (int) block.getData();
+            } else {
+                blockId = event.getItemInHand().getTypeId();
+                blockSubValue = (int) event.getItemInHand().getData().getData();
+            }
+
+            String blockIdAndSubValue = blockId + ":" + blockSubValue;
 
             if (event.getItemInHand().getType().getId() == 10259) { // builders wand
 
@@ -906,23 +915,23 @@ public class Plugin extends JavaPlugin implements Listener {
 
 
             // skip if block is not limited
-            if (!blockLimits.containsKey(blockId)) {
+            if (!blockLimits.containsKey(blockIdAndSubValue)) {
 
                 // do not track vanilla / mined blocks
-                if (!settings.blockStatsEnabled || block.getType().getId() < 256) {
+                if (!settings.blockStatsEnabled || blockId < 256) {
                     return;
                 }
 
                 // add to block stats
-                if (blockStats.containsKey(blockId)) {
-                    BlockStat blockStat = blockStats.get(blockId);
+                if (blockStats.containsKey(blockIdAndSubValue)) {
+                    BlockStat blockStat = blockStats.get(blockIdAndSubValue);
                     blockStat.current++;
                     blockStat.placed++;
                     databaseEngine.setBlockStat(blockStat);
 
                 } else {
-                    final BlockStat blockStat = new BlockStat(-1, 1, 1, 0, block.getType().getId(), (int) block.getData(), false);
-                    blockStats.put(blockId, blockStat);
+                    final BlockStat blockStat = new BlockStat(-1, 1, 1, 0, blockId, blockSubValue, false);
+                    blockStats.put(blockIdAndSubValue, blockStat);
                     databaseEngine.setBlockStat(blockStat);
                 }
 
@@ -933,7 +942,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            final BlockLimit blockLimit = blockLimits.get(blockId);
+            final BlockLimit blockLimit = blockLimits.get(blockIdAndSubValue);
 
             int limit = blockLimit.limit;
 
@@ -947,12 +956,12 @@ public class Plugin extends JavaPlugin implements Listener {
             Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerName);
 
             // make sure there is a list available for the type of block
-            if (!map.containsKey(blockId)) {
+            if (!map.containsKey(blockIdAndSubValue)) {
                 ArrayList<BlockInfo> list = new ArrayList<BlockInfo>();
-                map.put(blockId, list);
+                map.put(blockIdAndSubValue, list);
             }
 
-            ArrayList<BlockInfo> blockList = map.get(blockId);
+            ArrayList<BlockInfo> blockList = map.get(blockIdAndSubValue);
 
             if (limit > -1 && (blockList.size() + 1) > limit && !event.getPlayer().isOp()) {
                 event.setCancelled(true);
@@ -963,7 +972,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 return;
             } else {
-                BlockInfo blockInfo = new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), playerName, new Date());
+                BlockInfo blockInfo = new BlockInfo(0, blockIdAndSubValue, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), playerName, new Date());
 
                 // add to list of blocks
                 blockList.add(blockInfo);
