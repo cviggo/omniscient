@@ -55,7 +55,11 @@ public class Settings implements Serializable {
         if (plugin.getConfig().getDefaults() != null) {
             this.defaultKeys = plugin.getConfig().getDefaults().getKeys(true);
         } else {
-            throw new Exception("Failed to read default configuration");
+            this.defaultKeys = plugin.getConfig().getKeys(true);
+
+            if (defaultKeys == null) {
+                throw new Exception("Failed to read default configuration");
+            }
         }
     }
 

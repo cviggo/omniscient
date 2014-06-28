@@ -58,6 +58,7 @@ public class Plugin extends JavaPlugin implements Listener {
     private volatile PluginState state;
     private BukkitTask tickSchedule;
     private ProtocolHook protocolHook;
+    private Date lastBroadcast = new Date();
 
     public void onDisable() {
         logger.logInfo("Disable invoked. Stopping engines.");
@@ -137,7 +138,6 @@ public class Plugin extends JavaPlugin implements Listener {
 
         getLogger().info("Added packet listener");
     }
-
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {
         new BukkitRunnable() {
@@ -379,7 +379,6 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-
     private BukkitTask createWorldScannerSchedule() {
         return new BukkitRunnable() {
 
@@ -439,8 +438,6 @@ public class Plugin extends JavaPlugin implements Listener {
 
         }.runTaskTimer(this, TICKS_PER_SECOND * delaySeconds, TICKS_PER_SECOND * intervalSeconds);
     }
-
-    private Date lastBroadcast = new Date();
 
     private BukkitTask createTickSchedule() {
         return new BukkitRunnable() {
@@ -768,6 +765,7 @@ public class Plugin extends JavaPlugin implements Listener {
             return;
         }
 
+        //logger.logInfo("has metaData: " +  block.getState().getRawData() );
 
         // TODO: optimize
         String blockKey = getBlockKeyFromInfo(new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), null, null));
@@ -807,7 +805,7 @@ public class Plugin extends JavaPlugin implements Listener {
         }
 
         // remove from coordinate to player map as well
-        playerToBlockCoordsMap.remove(originallyPlacedBlockInfo.placedBy);
+        playerToBlockCoordsMap.remove(blockKey);
 
         if (settings.enablePlayerInfoOnBlockEvents) {
 
@@ -840,6 +838,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 player.sendMessage(toPlayer);
 
+
                 // is playerNameWhomPlacedTheBlock online - if so, tell the player?
                 final Player player2 = getServer().getPlayer(originallyPlacedBlockInfo.placedBy);
                 if (player2 != null) {
@@ -847,7 +846,7 @@ public class Plugin extends JavaPlugin implements Listener {
                             String.format(
                                     "%s removed your %s. You now have %d remaining.",
                                     player.getName(),
-                                    blockLimit.blockDisplayName,
+                                    blockLimit != null ? blockLimit.blockDisplayName : "unknown",
                                     limit - blockList.size()
                             )
                     );
@@ -856,8 +855,12 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST) // should force this to be invoked after protection plugins etc.
     public void onBlockPlace(BlockPlaceEvent event) {
+
+        if (event.isCancelled()) {
+            return;
+        }
 
         //logger.logInfo("block place event: "+ event.getBlock().getTypeId());
 
@@ -878,7 +881,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
         try {
 
-            messageIfDebugSender(event.getPlayer(), "placed a block: " + getBlockIdFromBlock(event.getBlock()));
+            messageIfDebugSender(event.getPlayer(), "placed a block: " + getBlockIdFromBlock(event.getBlock()) + ", with item in hand: " + event.getItemInHand().getTypeId());
 
             Block block = event.getBlock();
             String blockId = getBlockIdFromBlock(block);
@@ -1063,6 +1066,10 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
+
+        if (event.isCancelled()) {
+            return;
+        }
 
         //logger.logInfo("block break event: "+ event.getBlock().getTypeId());
 
