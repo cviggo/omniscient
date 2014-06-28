@@ -305,7 +305,7 @@ public class DatabaseEngine implements Runnable {
 
                     case Delete:
                         sql = String.format(
-                                "DELETE FROM BlockInfo WHERE (`world`, `x`, `y`, `z`) IN ('%s', %d, %d, %d)",
+                                "DELETE FROM BlockInfo WHERE (`world`, `x`, `y`, `z`) IN (`%s`, %d, %d, %d)",
                                 blockInfo.world,
                                 blockInfo.x,
                                 blockInfo.y,
@@ -326,7 +326,7 @@ public class DatabaseEngine implements Runnable {
                             blockInfo = updateTask.t;
 
                             sql += String.format(
-                                    ", (%s, %d, %d, %d)",
+                                    ", (`%s`, %d, %d, %d)",
                                     blockInfo.world,
                                     blockInfo.x,
                                     blockInfo.y,
