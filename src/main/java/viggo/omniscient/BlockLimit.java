@@ -5,14 +5,15 @@ import java.io.Serializable;
 public class BlockLimit implements Serializable {
     int id;
     int limit;
-    int limitGroup;
+    String limitGroup;
+    int groupLimit; // set during reload to avoid two map lookup
     int blockId;
     int subValue;
     String blockDisplayName;
     String rank;
     String world;
 
-    public BlockLimit(int id, int limit, int limitGroup, int blockId, int subValue, String blockDisplayName, String rank, String world) {
+    public BlockLimit(int id, int limit, String limitGroup, int blockId, int subValue, String blockDisplayName, String rank, String world) {
         this.id = id;
         this.limit = limit;
         this.limitGroup = limitGroup;

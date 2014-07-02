@@ -96,65 +96,65 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, r, "test", "placeBlocks") /*&& r.remainingCommands.size() == 3*/) {
-                final int dist = r.getInt(0);
-                final int id = r.getInt(1);
-                final int blockSubValue = r.getInt(2);
-                final String blockId = id + ":" + blockSubValue;
-
-                boolean assignPlayer = r.remainingCommands.size() == 4 && r.getBoolean(3);
-
-                final Player player = sender.getServer().getPlayer(sender.getName());
-                final Location location = player.getLocation();
-                final World world = location.getWorld();
-
-                final int x = (int) location.getX();
-                final int y = (int) location.getY();
-                final int z = (int) location.getZ();
-
-                String playerName = player.getName();
-
-                // make sure there is a map for the player
-                if (!plugin.playerBlocks.containsKey(playerName)) {
-                    plugin.playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
-                }
-
-                Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(playerName);
-
-                // make sure there is a list available for the type of block
-                if (!map.containsKey(blockId)) {
-                    ArrayList<BlockInfo> list = new ArrayList<BlockInfo>();
-                    map.put(blockId, list);
-                }
-
-                ArrayList<BlockInfo> blockList = map.get(blockId);
-
-
-                for (int ix = -dist; ix < dist; ix++) {
-                    for (int iy = -dist; iy < dist; iy++) {
-                        for (int iz = -dist; iz < dist; iz++) {
-                            final Block block = world.getBlockAt(x + ix, (255 - dist) + iy, z + iz);
-                            block.setTypeIdAndData(id, (byte) blockSubValue, false);
-
-                            if (assignPlayer) {
-                                BlockInfo blockInfo = new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), playerName, new Date());
-
-                                // add to list of blocks
-                                blockList.add(blockInfo);
-
-                                // add to coordinate to player map
-                                plugin.playerToBlockCoordsMap.put(plugin.getBlockKeyFromInfo(blockInfo), blockInfo);
-
-                                // add to database
-                                plugin.databaseEngine.setBlockInfo(blockInfo);
-                            }
-                        }
-                    }
-                }
-
-                sender.sendMessage("placed blocks");
-                return true;
-            }
+//            if (isCommand(args, r, "test", "placeBlocks") /*&& r.remainingCommands.size() == 3*/) {
+//                final int dist = r.getInt(0);
+//                final int id = r.getInt(1);
+//                final int blockSubValue = r.getInt(2);
+//                final String blockId = id + ":" + blockSubValue;
+//
+//                boolean assignPlayer = r.remainingCommands.size() == 4 && r.getBoolean(3);
+//
+//                final Player player = sender.getServer().getPlayer(sender.getName());
+//                final Location location = player.getLocation();
+//                final World world = location.getWorld();
+//
+//                final int x = (int) location.getX();
+//                final int y = (int) location.getY();
+//                final int z = (int) location.getZ();
+//
+//                String playerName = player.getName();
+//
+//                // make sure there is a map for the player
+//                if (!plugin.playerBlocks.containsKey(playerName)) {
+//                    plugin.playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
+//                }
+//
+//                Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(playerName);
+//
+//                // make sure there is a list available for the type of block
+//                if (!map.containsKey(blockId)) {
+//                    ArrayList<BlockInfo> list = new ArrayList<BlockInfo>();
+//                    map.put(blockId, list);
+//                }
+//
+//                ArrayList<BlockInfo> blockList = map.get(blockId);
+//
+//
+//                for (int ix = -dist; ix < dist; ix++) {
+//                    for (int iy = -dist; iy < dist; iy++) {
+//                        for (int iz = -dist; iz < dist; iz++) {
+//                            final Block block = world.getBlockAt(x + ix, (255 - dist) + iy, z + iz);
+//                            block.setTypeIdAndData(id, (byte) blockSubValue, false);
+//
+//                            if (assignPlayer) {
+//                                BlockInfo blockInfo = new BlockInfo(0, blockId, block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), playerName, new Date());
+//
+//                                // add to list of blocks
+//                                blockList.add(blockInfo);
+//
+//                                // add to coordinate to player map
+//                                plugin.playerToBlockCoordsMap.put(plugin.getBlockKeyFromInfo(blockInfo), blockInfo);
+//
+//                                // add to database
+//                                plugin.databaseEngine.setBlockInfo(blockInfo);
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                sender.sendMessage("placed blocks");
+//                return true;
+//            }
 
             if (isCommand(args, r, "test", "removeBlocks") && r.remainingCommands.size() == 1) {
                 final int dist = r.getInt(0);
@@ -392,7 +392,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 final String blockIdStr = blockId + ":" + subValue;
 
                 final int limit = r.getInt(0);
-                final int limitGroup = r.getInt(1);
+                final String limitGroup = r.getString(1);
                 final String blockDisplayName = r.getString(2);
 
                 if (plugin.blockLimits.containsKey(blockIdStr)) {
@@ -547,67 +547,67 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
-            if (isCommand(args, r, "blocks", "list") && r.remainingCommands.size() < 1) {
-                for (String item : r.remainingCommands) {
-                    plugin.logger.logInfo(item);
-                }
-
-                final int blockId = r.getInt(0);
-                final int subValue = r.getInt(1);
-                final String blockIdStr = blockId + ":" + subValue;
-
-                final Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(sender.getName());
-
-                if (map == null || !map.containsKey(blockIdStr)) {
-                    sender.sendMessage("No blocks of that type for given player.");
-                    return true;
-                }
-
-                final ArrayList<BlockInfo> blockInfos = map.get(blockIdStr);
-
-                if (blockInfos.size() > 0) {
-                    int cnt = 0;
-                    for (BlockInfo blockInfo : blockInfos) {
-                        sender.sendMessage(String.format("%s: %d.%d.%d", blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z));
-
-                        if (++cnt > 20) {
-                            sender.sendMessage("Reached maximum amount of blocks to list.");
-                            break;
-                        }
-                    }
-                } else {
-                    sender.sendMessage("No blocks of that type for given player.");
-                }
-
-                return true;
-            }
-
-            if (isCommand(args, r, "blocks", "list")) {
-
-                int currentCnt = 0;
-                int maxCnt = 100;
-
-                final Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(sender.getName());
-                final Set<String> keySet = map.keySet();
-                for (String key : keySet) {
-
-                    final ArrayList<BlockInfo> blockInfos = map.get(key);
-
-                    for (BlockInfo blockInfo : blockInfos) {
-
-                        sender.sendMessage(String.format("%s: %s", key, plugin.getBlockKeyFromInfo(blockInfo)));
-
-                        if (++currentCnt > maxCnt) {
-
-                            sender.sendMessage(String.format("Reached max count of %d", currentCnt));
-                            return true;
-                        }
-                    }
-                }
-
-                sender.sendMessage(String.format("Found a total of %d blocks", currentCnt));
-                return true;
-            }
+//            if (isCommand(args, r, "blocks", "list") && r.remainingCommands.size() < 1) {
+//                for (String item : r.remainingCommands) {
+//                    plugin.logger.logInfo(item);
+//                }
+//
+//                final int blockId = r.getInt(0);
+//                final int subValue = r.getInt(1);
+//                final String blockIdStr = blockId + ":" + subValue;
+//
+//                final Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(sender.getName());
+//
+//                if (map == null || !map.containsKey(blockIdStr)) {
+//                    sender.sendMessage("No blocks of that type for given player.");
+//                    return true;
+//                }
+//
+//                final ArrayList<BlockInfo> blockInfos = map.get(blockIdStr);
+//
+//                if (blockInfos.size() > 0) {
+//                    int cnt = 0;
+//                    for (BlockInfo blockInfo : blockInfos) {
+//                        sender.sendMessage(String.format("%s: %d.%d.%d", blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z));
+//
+//                        if (++cnt > 20) {
+//                            sender.sendMessage("Reached maximum amount of blocks to list.");
+//                            break;
+//                        }
+//                    }
+//                } else {
+//                    sender.sendMessage("No blocks of that type for given player.");
+//                }
+//
+//                return true;
+//            }
+//
+//            if (isCommand(args, r, "blocks", "list")) {
+//
+//                int currentCnt = 0;
+//                int maxCnt = 100;
+//
+//                final Map<String, ArrayList<BlockInfo>> map = plugin.playerBlocks.get(sender.getName());
+//                final Set<String> keySet = map.keySet();
+//                for (String key : keySet) {
+//
+//                    final ArrayList<BlockInfo> blockInfos = map.get(key);
+//
+//                    for (BlockInfo blockInfo : blockInfos) {
+//
+//                        sender.sendMessage(String.format("%s: %s", key, plugin.getBlockKeyFromInfo(blockInfo)));
+//
+//                        if (++currentCnt > maxCnt) {
+//
+//                            sender.sendMessage(String.format("Reached max count of %d", currentCnt));
+//                            return true;
+//                        }
+//                    }
+//                }
+//
+//                sender.sendMessage(String.format("Found a total of %d blocks", currentCnt));
+//                return true;
+//            }
 
             if (isCommand(args, r, "unknown", "list")) {
 

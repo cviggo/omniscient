@@ -88,7 +88,7 @@ public class DatabaseEngine implements Runnable {
 
                         updateBlockInfos();
                         updateBlockStats();
-                        updateBlockLimits();
+                        //updateBlockLimits();
 
 
                         if (this.state != DataBaseEngineState.Running) {
@@ -184,53 +184,53 @@ public class DatabaseEngine implements Runnable {
         }
     }
 
-    private void updateBlockLimits() throws SQLException {
-        if (blockLimitsToUpdate.size() > 0) {
-            Statement statement = conn.createStatement();
-
-            while (true) {
-                final UpdateTask<BlockLimit> updateTask = blockLimitsToUpdate.poll();
-
-                if (updateTask == null || updateTask.t == null) {
-                    break;
-                }
-
-                final BlockLimit blockLimit = updateTask.t;
-                String sql = null;
-
-                switch (updateTask.type) {
-
-                    case Save:
-
-                        sql = String.format(
-                                "INSERT INTO BlockLimit (`limit`, `limitGroup`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, %d, %d, %d, '%s')",
-                                blockLimit.limit,
-                                blockLimit.limitGroup,
-                                blockLimit.blockId,
-                                blockLimit.subValue,
-                                blockLimit.blockDisplayName
-                        );
-
-                        statement.addBatch(sql);
-                        break;
-
-                    case Delete:
-                        sql = String.format(
-                                "DELETE FROM BlockLimit WHERE (`blockId` = '%s' AND `subValue` = %d)",
-                                blockLimit.blockId,
-                                blockLimit.subValue
-                        );
-
-                        statement.addBatch(sql);
-                        break;
-                }
-            }
-
-            int[] results = statement.executeBatch();
-
-            plugin.logger.logInfo(String.format("processed %d block limits", results.length));
-        }
-    }
+//    private void updateBlockLimits() throws SQLException {
+//        if (blockLimitsToUpdate.size() > 0) {
+//            Statement statement = conn.createStatement();
+//
+//            while (true) {
+//                final UpdateTask<BlockLimit> updateTask = blockLimitsToUpdate.poll();
+//
+//                if (updateTask == null || updateTask.t == null) {
+//                    break;
+//                }
+//
+//                final BlockLimit blockLimit = updateTask.t;
+//                String sql = null;
+//
+//                switch (updateTask.type) {
+//
+//                    case Save:
+//
+//                        sql = String.format(
+//                                "INSERT INTO BlockLimit (`limit`, `limitGroup`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, %d, %d, %d, '%s')",
+//                                blockLimit.limit,
+//                                blockLimit.groupLimit,
+//                                blockLimit.blockId,
+//                                blockLimit.subValue,
+//                                blockLimit.blockDisplayName
+//                        );
+//
+//                        statement.addBatch(sql);
+//                        break;
+//
+//                    case Delete:
+//                        sql = String.format(
+//                                "DELETE FROM BlockLimit WHERE (`blockId` = '%s' AND `subValue` = %d)",
+//                                blockLimit.blockId,
+//                                blockLimit.subValue
+//                        );
+//
+//                        statement.addBatch(sql);
+//                        break;
+//                }
+//            }
+//
+//            int[] results = statement.executeBatch();
+//
+//            plugin.logger.logInfo(String.format("processed %d block limits", results.length));
+//        }
+//    }
 
     private void updateBlockInfos() throws SQLException {
         if (blockInfosToUpdate.size() > 0) {
@@ -431,7 +431,7 @@ public class DatabaseEngine implements Runnable {
                     final BlockLimit blockLimit = new BlockLimit(
                             resultSet.getInt("id"),
                             resultSet.getInt("limit"),
-                            resultSet.getInt("limitGroup"),
+                            resultSet.getString("limitGroup"),
                             resultSet.getInt("blockId"),
                             resultSet.getInt("subValue"),
                             resultSet.getString("blockDisplayName"),
@@ -449,13 +449,43 @@ public class DatabaseEngine implements Runnable {
         return blockLimits;
     }
 
-    public Map<String, Map<String, ArrayList<BlockInfo>>> getPlayerBlocks() {
+    public Map<String, BlockLimitGroup> getBlockLimitGroups() {
 
         if (!waitForConnection(5000)) {
             return null;
         }
 
-        Map<String, Map<String, ArrayList<BlockInfo>>> playerBlocks = new HashMap<String, Map<String, ArrayList<BlockInfo>>>();
+        Map<String, BlockLimitGroup> blockLimitGroups = new HashMap<String, BlockLimitGroup>();
+
+        synchronized (connectionLock) {
+            try {
+                Statement statement = conn.createStatement();
+
+                final ResultSet resultSet = statement.executeQuery("SELECT * FROM BlockLimitGroup");
+
+                while (resultSet.next()) {
+                    final BlockLimitGroup blockLimitGroup = new BlockLimitGroup(
+                            resultSet.getString("name"),
+                            resultSet.getInt("limit")
+                    );
+
+                    blockLimitGroups.put(blockLimitGroup.name, blockLimitGroup);
+                }
+            } catch (SQLException e) {
+                plugin.logger.logSevere(e.getMessage());
+            }
+        }
+
+        return blockLimitGroups;
+    }
+
+    public Map<String, BlockGroupAndInfos> getPlayerBlocks(Map<String, BlockLimit> limits, Map<String, BlockLimitGroup> limitGroups) {
+
+        if (!waitForConnection(5000)) {
+            return null;
+        }
+
+        Map<String, BlockGroupAndInfos> playerBlocks = new HashMap<String, BlockGroupAndInfos>();
 
         synchronized (connectionLock) {
             try {
@@ -479,10 +509,41 @@ public class DatabaseEngine implements Runnable {
 
                     // make sure there is a map for the player
                     if (!playerBlocks.containsKey(playerName)) {
-                        playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
+
+                        BlockGroupAndInfos blockGroupAndInfos = new BlockGroupAndInfos();
+                        blockGroupAndInfos.groupMap = new HashMap<String, GroupCount>();
+                        blockGroupAndInfos.blockMap = new HashMap<String, ArrayList<BlockInfo>>();
+
+                        playerBlocks.put(playerName, blockGroupAndInfos);
                     }
 
-                    Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerName);
+                    BlockGroupAndInfos groupAndInfos = playerBlocks.get(playerName);
+
+                    BlockLimit limit = limits.get(blockInfo.blockId);
+
+                    if (limit != null) {
+
+                        final BlockLimitGroup limitGroup = limitGroups.get(limit.limitGroup);
+
+                        if (limitGroup == null) {
+                            plugin.logger.logWarn(String.format("Limit group could not be found. limitGroup: %s", limit.limitGroup));
+                        } else {
+                            Map<String, GroupCount> groupMap = groupAndInfos.groupMap;
+
+                            GroupCount groupCount = groupMap.get(limit.limitGroup);
+
+                            if (groupCount == null) {
+                                groupCount = new GroupCount();
+                                groupMap.put(limit.limitGroup, groupCount);
+                            } else {
+                                groupCount.limit = limitGroup.limit;
+                            }
+
+                            groupCount.value++;
+                        }
+                    }
+
+                    Map<String, ArrayList<BlockInfo>> map = groupAndInfos.blockMap;
 
                     // make sure there is a list available for the type of block
                     if (!map.containsKey(blockInfo.blockId)) {

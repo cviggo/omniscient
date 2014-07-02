@@ -48,9 +48,10 @@ public class Plugin extends JavaPlugin implements Listener {
     /**
      * Map from player name to Map of block types, which then maps to a list of block info.
      */
-    Map<String, Map<String, ArrayList<BlockInfo>>> playerBlocks;
+    Map<String, BlockGroupAndInfos> playerBlocks;
     Map<String, BlockLimit> blockLimits;
     Map<String, BlockStat> blockStats;
+    private Map<String, BlockLimitGroup> blockLimitGroups;
     private ConcurrentLinkedQueue<BlockInfo> unknownBlocksFound;
     private BukkitTask worldScanSchedule;
     private BukkitTask syncSchedule;
@@ -310,6 +311,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                         sign.update(true, false);
 
+
                     }
 
                     unknownBlocksProcessingState.set(0);
@@ -335,10 +337,32 @@ public class Plugin extends JavaPlugin implements Listener {
                         // HACK: code copy
                         // make sure there is a map for the player
                         if (!playerBlocks.containsKey(playerName)) {
-                            playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
+                            BlockGroupAndInfos blockGroupAndInfos = new BlockGroupAndInfos();
+                            blockGroupAndInfos.groupMap = new HashMap<String, GroupCount>();
+                            blockGroupAndInfos.blockMap = new HashMap<String, ArrayList<BlockInfo>>();
+
+                            playerBlocks.put(playerName, blockGroupAndInfos);
                         }
 
-                        Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerName);
+                        BlockGroupAndInfos groupAndInfos = playerBlocks.get(playerName);
+
+//                        /* if a limit exist for this type of block, we also add to the group count */
+//                        BlockLimit limit = blockLimits.get(blockInfo.blockId);
+//                        if (limit != null) {
+//                            Map<String, GroupCount> groupMap = groupAndInfos.groupMap;
+//
+//                            GroupCount groupCount = groupMap.get(limit.limitGroup);
+//
+//                            if (groupCount == null){
+//                                groupCount = new GroupCount();
+//                                groupMap.put(limit.limitGroup, groupCount);
+//                            }
+//
+//                            groupCount.value++;
+//                        }
+
+
+                        Map<String, ArrayList<BlockInfo>> map = groupAndInfos.blockMap;
 
                         // make sure there is a list available for the type of block
                         if (!map.containsKey(blockInfo.blockId)) {
@@ -598,13 +622,17 @@ public class Plugin extends JavaPlugin implements Listener {
     }
 
     public void reloadData(boolean ignoreEmptyBlocks) throws Exception {
-        playerBlocks = databaseEngine.getPlayerBlocks();
+
+        blockLimits = databaseEngine.getBlockLimits();
+        blockLimitGroups = databaseEngine.getBlockLimitGroups();
+
+        playerBlocks = databaseEngine.getPlayerBlocks(blockLimits, blockLimitGroups);
 
         playerToBlockCoordsMap = new ConcurrentHashMap<String, BlockInfo>();
 
         Set<String> playerNames = playerBlocks.keySet();
         for (String playerName : playerNames) {
-            Collection<ArrayList<BlockInfo>> blockTypes = playerBlocks.get(playerName).values();
+            Collection<ArrayList<BlockInfo>> blockTypes = playerBlocks.get(playerName).blockMap.values();
             for (ArrayList<BlockInfo> blockType : blockTypes) {
                 for (BlockInfo blockInfo : blockType) {
                     playerToBlockCoordsMap.put(
@@ -615,7 +643,6 @@ public class Plugin extends JavaPlugin implements Listener {
             }
         }
 
-        blockLimits = databaseEngine.getBlockLimits();
         blockStats = databaseEngine.getBlockStats();
 
 
@@ -691,7 +718,7 @@ public class Plugin extends JavaPlugin implements Listener {
             if (playerToBlockCoordsMap.containsKey(blockKey)) {
                 owner = playerToBlockCoordsMap.get(blockKey).placedBy;
 
-                final Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(owner);
+                final Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(owner).blockMap;
 
                 if (map.containsKey(blockIdFromBlock)) {
                     final ArrayList<BlockInfo> blockInfos = map.get(blockIdFromBlock);
@@ -706,7 +733,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
             String message;
 
-            if (blockLimit != null) {
+            if (blockLimit != null && blockLimit.limit > -1) {
                 message = String.format("%s is owned by: %s. Limit: %s of %s",
                         blockLimit.blockDisplayName,
                         owner != null ? owner : "unknown",
@@ -777,7 +804,14 @@ public class Plugin extends JavaPlugin implements Listener {
 
         final BlockInfo originallyPlacedBlockInfo = playerToBlockCoordsMap.get(blockKey);
 
-        Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(originallyPlacedBlockInfo.placedBy);
+        if (originallyPlacedBlockInfo == null) {
+            logger.logWarn(String.format("originallyPlacedBlockInfo did not exist. blockKey: %s", blockKey));
+            return;
+        }
+
+        BlockGroupAndInfos groupAndInfos = playerBlocks.get(originallyPlacedBlockInfo.placedBy);
+        Map<String, GroupCount> groupMap = groupAndInfos.groupMap;
+        Map<String, ArrayList<BlockInfo>> map = groupAndInfos.blockMap;
 
         if (!map.containsKey(originallyPlacedBlockInfo.blockId)) {
             return;
@@ -790,6 +824,8 @@ public class Plugin extends JavaPlugin implements Listener {
         int z = block.getZ();
 
         BlockInfo blockInfoRemoved = null;
+        int groupCountValue = -1;
+        int groupCountLimit = -1;
 
         for (Iterator<?> it = blockList.iterator(); it.hasNext(); ) {
             BlockInfo blockInfoFromList = (BlockInfo) it.next();
@@ -800,6 +836,17 @@ public class Plugin extends JavaPlugin implements Listener {
                 // remove from list
                 blockInfoRemoved = blockInfoFromList;
                 it.remove();
+
+                BlockLimit blockLimit = blockLimits.get(blockInfoRemoved.blockId);
+                if (blockLimit != null) {
+                    GroupCount groupCount = groupMap.get(blockLimit.limitGroup);
+                    if (groupCount != null) {
+                        groupCount.value--;
+                        groupCountValue = groupCount.value;
+                        groupCountLimit = groupCount.limit;
+                    }
+                }
+
                 databaseEngine.deleteBlockInfo(blockInfoFromList);
             }
         }
@@ -816,6 +863,13 @@ public class Plugin extends JavaPlugin implements Listener {
                 blockLimit = blockLimits.get(blockInfoRemoved.blockId);
                 limit = blockLimit.limit;
             }
+
+            int remaining = Math.max(
+                    limit == -1 ? -1 : (limit - blockList.size()),
+                    groupCountLimit == -1 ? -1 : groupCountLimit - groupCountValue
+            );
+
+            if (remaining > -1 && remaining < 3) {
 
             if (originallyPlacedBlockInfo.placedBy.equals(player.getName())) {
                 // players own block
@@ -834,7 +888,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 String toPlayer = String.format("Removed %s. %s now has %d remaining.",
                         blockLimit != null ? blockLimit.blockDisplayName : "unknown",
                         originallyPlacedBlockInfo != null ? originallyPlacedBlockInfo.placedBy : "unknown",
-                        (limit - blockList.size()));
+                        remaining);
 
                 player.sendMessage(toPlayer);
 
@@ -847,10 +901,11 @@ public class Plugin extends JavaPlugin implements Listener {
                                     "%s removed your %s. You now have %d remaining.",
                                     player.getName(),
                                     blockLimit != null ? blockLimit.blockDisplayName : "unknown",
-                                    limit - blockList.size()
+                                    remaining
                             )
                     );
                 }
+            }
             }
         }
     }
@@ -948,12 +1003,37 @@ public class Plugin extends JavaPlugin implements Listener {
 
             String playerName = event.getPlayer().getName();
 
-            // make sure there is a map for the player
+            // make sure there are maps for the player
             if (!playerBlocks.containsKey(playerName)) {
-                playerBlocks.put(playerName, new HashMap<String, ArrayList<BlockInfo>>());
+
+                BlockGroupAndInfos blockGroupAndInfos = new BlockGroupAndInfos();
+                blockGroupAndInfos.groupMap = new HashMap<String, GroupCount>();
+                blockGroupAndInfos.blockMap = new HashMap<String, ArrayList<BlockInfo>>();
+
+                playerBlocks.put(playerName, blockGroupAndInfos);
             }
 
-            Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerName);
+            BlockGroupAndInfos groupAndInfos = playerBlocks.get(playerName);
+
+
+            int groupCountValue = -1;
+            int groupCountLimit = -1;
+
+            Map<String, GroupCount> groupMap = groupAndInfos.groupMap;
+
+            GroupCount groupCount = null;
+
+            if (blockLimit.limitGroup != null && groupMap.containsKey(blockLimit.limitGroup)) {
+                groupCount = groupMap.get(blockLimit.limitGroup);
+
+                if (groupCount != null) {
+                    groupCountValue = groupCount.value;
+                    groupCountLimit = groupCount.limit;
+                }
+            }
+
+            Map<String, ArrayList<BlockInfo>> map = groupAndInfos.blockMap;
+
 
             // make sure there is a list available for the type of block
             if (!map.containsKey(blockIdAndSubValue)) {
@@ -963,7 +1043,22 @@ public class Plugin extends JavaPlugin implements Listener {
 
             ArrayList<BlockInfo> blockList = map.get(blockIdAndSubValue);
 
-            if (limit > -1 && (blockList.size() + 1) > limit && !event.getPlayer().isOp()) {
+
+            int remaining = Math.min(
+                    limit == -1 ? -1 : (limit - blockList.size()),
+                    groupCountLimit == -1 ? -1 : groupCountLimit - groupCountValue
+            );
+
+
+            if (
+                    remaining > -1 // unlimited ?
+                            && (
+                            (blockList.size() + 1) > remaining // exceed block limit ?
+                                    || groupCountValue + 1 > remaining // exceed group limit ?
+                    )
+                            && !event.getPlayer().isOp() // op ignores limits
+                    ) {
+
                 event.setCancelled(true);
 
                 if (settings.enablePlayerInfoOnBlockEvents) {
@@ -977,13 +1072,17 @@ public class Plugin extends JavaPlugin implements Listener {
                 // add to list of blocks
                 blockList.add(blockInfo);
 
+                if (groupCount != null) {
+                    groupCount.value++;
+                }
+
                 // add to coordinate to player map
                 playerToBlockCoordsMap.put(getBlockKeyFromInfo(blockInfo), blockInfo);
 
                 // add to database
                 databaseEngine.setBlockInfo(blockInfo);
 
-                if (limit > -1 && settings.enablePlayerInfoOnBlockEvents && (blockList.size() + 5) > limit) { // HOTFIX: show limit only when 5 or less remaining
+                if (limit > -1 && settings.enablePlayerInfoOnBlockEvents && (blockList.size() + 3) > limit) { // HOTFIX: show limit only when 5 or less remaining
                     event.getPlayer().sendMessage("You can place an additional " + (limit - blockList.size()) + " of " + blockLimit.blockDisplayName + ".");
                 }
             }
@@ -1013,7 +1112,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
             Set<String> playerNames = playerBlocks.keySet();
             for (String playerName : playerNames) {
-                Collection<ArrayList<BlockInfo>> blockTypes = playerBlocks.get(playerName).values();
+                Collection<ArrayList<BlockInfo>> blockTypes = playerBlocks.get(playerName).blockMap.values();
                 for (ArrayList<BlockInfo> blockType : blockTypes) {
 
                     for (Iterator<?> it = blockType.iterator(); it.hasNext(); ) {
