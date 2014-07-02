@@ -624,9 +624,22 @@ public class Plugin extends JavaPlugin implements Listener {
     public void reloadData(boolean ignoreEmptyBlocks) throws Exception {
 
         blockLimits = databaseEngine.getBlockLimits();
+
+        if (blockLimits == null || blockLimits.size() < 1) {
+            throw new Exception("blockLimits are not allowed to be null or empty");
+        }
+
         blockLimitGroups = databaseEngine.getBlockLimitGroups();
 
+        if (blockLimitGroups == null || blockLimitGroups.size() < 1) {
+            throw new Exception("blockLimitGroups are not allowed to be null or empty");
+        }
+
         playerBlocks = databaseEngine.getPlayerBlocks(blockLimits, blockLimitGroups);
+
+        if (playerBlocks == null || playerBlocks.size() < 1) {
+            throw new Exception("playerBlocks are not allowed to be null or empty");
+        }
 
         playerToBlockCoordsMap = new ConcurrentHashMap<String, BlockInfo>();
 

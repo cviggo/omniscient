@@ -434,9 +434,11 @@ public class DatabaseEngine implements Runnable {
                             resultSet.getString("limitGroup"),
                             resultSet.getInt("blockId"),
                             resultSet.getInt("subValue"),
+                            resultSet.getString("world"),
                             resultSet.getString("blockDisplayName"),
-                            resultSet.getString("rank"),
-                            resultSet.getString("world")
+                            resultSet.getString("name"),
+                            resultSet.getString("class"),
+                            resultSet.getDate("updated")
                     );
 
                     blockLimits.put(String.format("%d:%d", blockLimit.blockId, blockLimit.subValue), blockLimit);

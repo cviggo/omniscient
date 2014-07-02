@@ -402,7 +402,7 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 }
 
 
-                final BlockLimit blockLimit = new BlockLimit(-1, limit, limitGroup, blockId, subValue, blockDisplayName, null, null);
+                final BlockLimit blockLimit = new BlockLimit(-1, limit, limitGroup, blockId, subValue, null, blockDisplayName, null, null, null);
                 plugin.blockLimits.put(blockIdStr, blockLimit);
                 plugin.databaseEngine.setBlockLimit(blockLimit);
 
