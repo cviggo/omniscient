@@ -859,19 +859,28 @@ public class Plugin extends JavaPlugin implements Listener {
                 blockInfoRemoved = blockInfoFromList;
                 it.remove();
 
-                BlockLimit blockLimit = blockLimits.get(blockInfoRemoved.blockId);
-                if (blockLimit != null) {
-                    GroupCount groupCount = groupMap.get(blockLimit.limitGroup);
+                BlockLimit blockLimitFromSpecificOrRange;
+
+                String blockIdRange = block.getTypeId() + ":-1";
+
+                if (blockLimits.containsKey(blockIdRange)) {
+                    blockLimitFromSpecificOrRange = blockLimits.get(blockIdRange);
+                } else {
+                    blockLimitFromSpecificOrRange = blockLimits.get(blockInfoRemoved.blockId);
+                }
+
+                if (blockLimitFromSpecificOrRange != null) {
+                    GroupCount groupCount = groupMap.get(blockLimitFromSpecificOrRange.limitGroup);
                     if (groupCount != null) {
                         groupCount.value--;
-                        //player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
+                        player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                         groupCountValue = groupCount.value;
                         groupCountLimit = groupCount.limit;
                     } else {
-                        //player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimit.limitGroup + ", groupMap.size(): " + groupMap.size());
+                        player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimitFromSpecificOrRange.limitGroup + ", groupMap.size(): " + groupMap.size());
                     }
                 } else {
-                    //player.sendMessage("blockLimit null");
+                    player.sendMessage("blockLimit null");
                 }
 
 
@@ -886,12 +895,20 @@ public class Plugin extends JavaPlugin implements Listener {
 
         if (settings.enablePlayerInfoOnBlockEvents) {
 
-            BlockLimit blockLimit = null;
+            BlockLimit blockLimitFromSpecificOrRange = null;
             int limit = -1;
 
             if (blockInfoRemoved != null && blockLimits.containsKey(blockInfoRemoved.blockId)) {
-                blockLimit = blockLimits.get(blockInfoRemoved.blockId);
-                limit = blockLimit.limit;
+
+                String blockIdRange = blockInfoRemoved.id + ":-1";
+
+                if (blockLimits.containsKey(blockIdRange)) {
+                    blockLimitFromSpecificOrRange = blockLimits.get(blockIdRange);
+                } else {
+                    blockLimitFromSpecificOrRange = blockLimits.get(blockInfoRemoved.blockId);
+                }
+
+                limit = blockLimitFromSpecificOrRange.limit;
             }
 
             int remaining = Math.max(
@@ -904,10 +921,10 @@ public class Plugin extends JavaPlugin implements Listener {
             if (originallyPlacedBlockInfo.placedBy.equals(player.getName())) {
                 // players own block
 
-                String remainingStr = (blockLimit != null ? (limit - blockList.size()) + "" : "unknown");
+                String remainingStr = (blockLimitFromSpecificOrRange != null ? (limit - blockList.size()) + "" : "unknown");
 
                 player.sendMessage(
-                        "Removed " + (blockLimit != null ? blockLimit.blockDisplayName : "unknown")
+                        "Removed " + (blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown")
                                 + ". You now have " + remainingStr + " remaining."
                 );
 
@@ -916,7 +933,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 // another players block
                 String toPlayer = String.format("Removed %s. %s now has %d remaining.",
-                        blockLimit != null ? blockLimit.blockDisplayName : "unknown",
+                        blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown",
                         originallyPlacedBlockInfo != null ? originallyPlacedBlockInfo.placedBy : "unknown",
                         remaining);
 
@@ -930,7 +947,7 @@ public class Plugin extends JavaPlugin implements Listener {
                             String.format(
                                     "%s removed your %s. You now have %d remaining.",
                                     player.getName(),
-                                    blockLimit != null ? blockLimit.blockDisplayName : "unknown",
+                                    blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown",
                                     remaining
                             )
                     );
@@ -979,6 +996,7 @@ public class Plugin extends JavaPlugin implements Listener {
             }
 
             String blockIdAndSubValue = blockId + ":" + blockSubValue;
+            String blockIdRange = blockId + ":-1";
 
             if (event.getItemInHand().getType().getId() == 10259) { // builders wand
 
@@ -1000,7 +1018,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
 
             // skip if block is not limited
-            if (!blockLimits.containsKey(blockIdAndSubValue)) {
+            if (!blockLimits.containsKey(blockIdAndSubValue) && !blockLimits.containsKey(blockIdRange)) {
 
                 // do not track vanilla / mined blocks
                 if (!settings.blockStatsEnabled || blockId < 256) {
@@ -1027,9 +1045,14 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            final BlockLimit blockLimit = blockLimits.get(blockIdAndSubValue);
+            BlockLimit blockLimitFromSpecificOrRange;
 
-            int limit = blockLimit.limit;
+            if (blockLimits.containsKey(blockIdRange)) {
+                blockLimitFromSpecificOrRange = blockLimits.get(blockIdRange);
+                messageIfDebugSender(event.getPlayer(), "limit is from range");
+            } else {
+                blockLimitFromSpecificOrRange = blockLimits.get(blockIdAndSubValue);
+            }
 
             String playerName = event.getPlayer().getName();
 
@@ -1054,25 +1077,23 @@ public class Plugin extends JavaPlugin implements Listener {
             GroupCount groupCount = null;
 
             /* are we placing a block of this type for the first time, if so, the group map have likely not been initialized */
-            if (blockLimit.limitGroup != null && !groupMap.containsKey(blockLimit.limitGroup)) {
-                final BlockLimitGroup limitGroup = blockLimitGroups.get(blockLimit.limitGroup);
+            if (blockLimitFromSpecificOrRange.limitGroup != null && !groupMap.containsKey(blockLimitFromSpecificOrRange.limitGroup)) {
+                final BlockLimitGroup limitGroup = blockLimitGroups.get(blockLimitFromSpecificOrRange.limitGroup);
 
                 if (limitGroup != null) {
                     groupCount = new GroupCount();
                     groupCount.limit = limitGroup.limit;
                     groupCount.value = 0;
-                    groupMap.put(blockLimit.limitGroup, groupCount);
+                    groupMap.put(blockLimitFromSpecificOrRange.limitGroup, groupCount);
                 }
             }
 
-            if (blockLimit.limitGroup != null && groupMap.containsKey(blockLimit.limitGroup)) {
-                groupCount = groupMap.get(blockLimit.limitGroup);
+            if (blockLimitFromSpecificOrRange.limitGroup != null && groupMap.containsKey(blockLimitFromSpecificOrRange.limitGroup)) {
+                groupCount = groupMap.get(blockLimitFromSpecificOrRange.limitGroup);
 
                 if (groupCount != null) {
                     groupCountValue = groupCount.value;
                     groupCountLimit = groupCount.limit;
-                } else {
-                    groupCountLimit = Integer.MAX_VALUE;
                 }
             }
 
@@ -1089,17 +1110,27 @@ public class Plugin extends JavaPlugin implements Listener {
 
             int remaining = 0;
 
-            if (groupCountLimit != Integer.MAX_VALUE) {
-                remaining = Math.min(
-                        limit == -1 ? -1 : (limit - blockList.size()),
-                        (groupCountLimit == -1 ? -1 : groupCountLimit - groupCountValue)
-                );
+            if (groupCount != null) {
+
+                if (groupCountLimit < 0) {
+                    remaining = -1;
+                } else {
+                    remaining = Math.min(
+                            blockLimitFromSpecificOrRange.limit == -1 ? Integer.MAX_VALUE : blockLimitFromSpecificOrRange.limit - blockList.size(),
+                            groupCountLimit - groupCountValue
+                    );
+                }
+
                 // event.getPlayer().sendMessage("set with group");
             } else {
-                remaining = limit == -1 ? -1 : (limit - blockList.size());
+                remaining = blockLimitFromSpecificOrRange.limit == -1 ? -1 : (blockLimitFromSpecificOrRange.limit - blockList.size());
             }
 
-            // event.getPlayer().sendMessage("remaining: " + remaining + ", limit: " + limit + ", groupCountLimit: " + groupCountLimit);
+            event.getPlayer().sendMessage(
+                    "remaining: " + remaining +
+                            ", limit: " + blockLimitFromSpecificOrRange.limit +
+                            ", groupCountLimit: " + groupCountLimit
+            );
 
 
             if (
@@ -1127,7 +1158,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 if (groupCount != null) {
                     groupCount.value++;
-                    //event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
+                    event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                 }
 
                 // add to coordinate to player map
@@ -1136,8 +1167,8 @@ public class Plugin extends JavaPlugin implements Listener {
                 // add to database
                 databaseEngine.setBlockInfo(blockInfo);
 
-                if (limit > -1 && settings.enablePlayerInfoOnBlockEvents && (blockList.size() + 3) > limit) { // HOTFIX: show limit only when 5 or less remaining
-                    event.getPlayer().sendMessage("You can place an additional " + remaining + " of " + blockLimit.blockDisplayName + ".");
+                if (remaining > 0 && settings.enablePlayerInfoOnBlockEvents && (blockList.size() + 3) > remaining) { // HOTFIX: show limit only when 5 or less remaining
+                    event.getPlayer().sendMessage("You can place an additional " + remaining + " of " + blockLimitFromSpecificOrRange.blockDisplayName + ".");
                 }
             }
 

@@ -544,27 +544,41 @@ public class DatabaseEngine implements Runnable {
 
                     BlockGroupAndInfos groupAndInfos = playerBlocks.get(playerName);
 
-                    BlockLimit limit = limits.get(blockInfo.blockId);
+                    BlockLimit blockLimitFromSpecificOrRange;
 
-                    if (limit != null) {
+                    String blockIdRange = blockInfo.blockId.substring(0, blockInfo.blockId.indexOf(":") - 1) + ":-1";
 
-                        final BlockLimitGroup limitGroup = limitGroups.get(limit.limitGroup);
+                    if (limits.containsKey(blockIdRange)) {
+                        plugin.logger.logInfo("found range id: " + blockIdRange);
+                        blockLimitFromSpecificOrRange = limits.get(blockIdRange);
+                    } else {
+                        blockLimitFromSpecificOrRange = limits.get(blockInfo.blockId);
+                    }
+
+                    // BlockLimit limit = limits.get(blockInfo.blockId);
+
+                    if (blockLimitFromSpecificOrRange != null) {
+
+                        final BlockLimitGroup limitGroup = limitGroups.get(blockLimitFromSpecificOrRange.limitGroup);
 
                         if (limitGroup == null) {
                             //plugin.logger.logWarn(String.format("Limit group could not be found. limitGroup: %s", limit.limitGroup));
                         } else {
                             Map<String, GroupCount> groupMap = groupAndInfos.groupMap;
 
-                            GroupCount groupCount = groupMap.get(limit.limitGroup);
+                            GroupCount groupCount = groupMap.get(blockLimitFromSpecificOrRange.limitGroup);
 
                             if (groupCount == null) {
                                 groupCount = new GroupCount();
                                 groupCount.limit = limitGroup.limit;
-                                groupMap.put(limit.limitGroup, groupCount);
+                                groupMap.put(blockLimitFromSpecificOrRange.limitGroup, groupCount);
                             }
 
                             groupCount.value++;
                         }
+                    } else {
+                        return new HashMap<String, BlockGroupAndInfos>();
+                        //throw new Exception();
                     }
 
                     Map<String, ArrayList<BlockInfo>> map = groupAndInfos.blockMap;

@@ -657,6 +657,28 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 }
             }
 
+            if (isCommand(args, r, "dump")) {
+                final BlockGroupAndInfos blockGroupAndInfos = plugin.playerBlocks.get(sender.getName());
+                final Collection<ArrayList<BlockInfo>> mapValues = blockGroupAndInfos.blockMap.values();
+
+                for (ArrayList<BlockInfo> mapValue : mapValues) {
+                    for (BlockInfo blockInfo : mapValue) {
+                        sender.sendMessage(String.format("B:%d.%d.%d:%s", blockInfo.x, blockInfo.y, blockInfo.z, blockInfo.world));
+                    }
+                }
+
+                final Set<String> groupKeys = blockGroupAndInfos.groupMap.keySet();
+
+                for (String groupKey : groupKeys) {
+
+                    final GroupCount groupValue = blockGroupAndInfos.groupMap.get(groupKey);
+
+                    sender.sendMessage(String.format("G:%s:%d:%d", groupKey, groupValue.value, groupValue.limit));
+                }
+
+
+                return true;
+            }
             if (isCommand(args, r, "forceRun")) {
                 plugin.setState(PluginState.Running);
                 return true;
