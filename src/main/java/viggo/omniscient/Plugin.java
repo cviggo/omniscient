@@ -855,10 +855,16 @@ public class Plugin extends JavaPlugin implements Listener {
                     GroupCount groupCount = groupMap.get(blockLimit.limitGroup);
                     if (groupCount != null) {
                         groupCount.value--;
+                        player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                         groupCountValue = groupCount.value;
                         groupCountLimit = groupCount.limit;
+                    } else {
+                        player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimit.limitGroup + ", groupMap.size(): " + groupMap.size());
                     }
+                } else {
+                    player.sendMessage("blockLimit null");
                 }
+
 
                 databaseEngine.deleteBlockInfo(blockInfoFromList);
             }
@@ -866,6 +872,8 @@ public class Plugin extends JavaPlugin implements Listener {
 
         // remove from coordinate to player map as well
         playerToBlockCoordsMap.remove(blockKey);
+
+        player.sendMessage(String.format("block removed. groupCountValue: %d,  groupCountLimit: %d", groupCountValue, groupCountLimit));
 
         if (settings.enablePlayerInfoOnBlockEvents) {
 
@@ -1069,7 +1077,7 @@ public class Plugin extends JavaPlugin implements Listener {
                             (blockList.size() + 1) > remaining // exceed block limit ?
                                     || groupCountValue + 1 > remaining // exceed group limit ?
                     )
-                            && !event.getPlayer().isOp() // op ignores limits
+                //&& !event.getPlayer().isOp() // op ignores limits
                     ) {
 
                 event.setCancelled(true);
@@ -1087,6 +1095,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 if (groupCount != null) {
                     groupCount.value++;
+                    event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                 }
 
                 // add to coordinate to player map

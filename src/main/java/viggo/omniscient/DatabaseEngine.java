@@ -236,12 +236,30 @@ public class DatabaseEngine implements Runnable {
         if (blockInfosToUpdate.size() > 0) {
             Statement statement = conn.createStatement();
 
+            int itemsProcessed = 0;
+
+//            ArrayList<UpdateTask<BlockInfo>> blockInfosToUpdateLocal = new ArrayList<UpdateTask<BlockInfo>>();
+//
+//            while (true){
+//                UpdateTask<BlockInfo> updateTask = blockInfosToUpdate.poll();
+//
+//                if (updateTask == null || updateTask.t == null) {
+//                    break;
+//                }
+//
+//                blockInfosToUpdateLocal
+//            }
+
+            ArrayList<String> orderedBatches = new ArrayList<String>();
+
             while (true) {
                 UpdateTask<BlockInfo> updateTask = blockInfosToUpdate.poll();
 
                 if (updateTask == null || updateTask.t == null) {
                     break;
                 }
+
+                itemsProcessed++;
 
                 BlockInfo blockInfo = updateTask.t;
                 String sql;
@@ -300,7 +318,8 @@ public class DatabaseEngine implements Runnable {
                         }
 
 
-                        statement.addBatch(sql);
+                        //statement.addBatch(sql);
+                        orderedBatches.add(sql);
                         break;
 
                     case Delete:
@@ -339,16 +358,23 @@ public class DatabaseEngine implements Runnable {
                         }
 
                         sql += ")";
-                        statement.addBatch(sql);
+                        //statement.addBatch(sql);
+
+                        orderedBatches.add(sql);
                         break;
                 }
             }
 
             plugin.logger.logInfo("Begin info batch");
-            int[] results = statement.executeBatch();
+            //int[] results = statement.executeBatch();
+
+            for (String orderedBatch : orderedBatches) {
+                statement.execute(orderedBatch);
+            }
+
             plugin.logger.logInfo("End info batch");
 
-            plugin.logger.logInfo(String.format("processed %d block infos", results.length));
+            plugin.logger.logInfo(String.format("processed %d block infos", itemsProcessed));
         }
     }
 
@@ -392,10 +418,6 @@ public class DatabaseEngine implements Runnable {
     public void setBlockInfo(BlockInfo blockInfo) {
         blockInfosToUpdate.add(new UpdateTask<BlockInfo>(blockInfo, UpdateType.Save));
     }
-
-//    public boolean hasUnsavedItems() {
-//        return blockInfosToUpdate.size() > 0;
-//    }
 
     public void deleteBlockInfo(BlockInfo blockInfo) {
         blockInfosToUpdate.add(new UpdateTask<BlockInfo>(blockInfo, UpdateType.Delete));
@@ -528,7 +550,7 @@ public class DatabaseEngine implements Runnable {
                         final BlockLimitGroup limitGroup = limitGroups.get(limit.limitGroup);
 
                         if (limitGroup == null) {
-                            plugin.logger.logWarn(String.format("Limit group could not be found. limitGroup: %s", limit.limitGroup));
+                            //plugin.logger.logWarn(String.format("Limit group could not be found. limitGroup: %s", limit.limitGroup));
                         } else {
                             Map<String, GroupCount> groupMap = groupAndInfos.groupMap;
 
