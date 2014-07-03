@@ -293,7 +293,7 @@ public class DatabaseEngine implements Runnable {
                         while (blockInfosToUpdate.size() > 0) {
 
                             updateTask = blockInfosToUpdate.peek(); // just peek to see if the next item is also a save
-                            if (updateTask == null || updateTask.t == null && updateTask.type == UpdateType.Save) {
+                            if (updateTask == null || updateTask.t == null || updateTask.type != UpdateType.Save) {
                                 break;
                             }
 
@@ -336,7 +336,7 @@ public class DatabaseEngine implements Runnable {
                         while (blockInfosToUpdate.size() > 0) {
 
                             updateTask = blockInfosToUpdate.peek(); // just peek to see if the next item is also a delete
-                            if (updateTask == null || updateTask.t == null && updateTask.type == UpdateType.Delete) {
+                            if (updateTask == null || updateTask.t == null || updateTask.type != UpdateType.Delete) {
                                 break;
                             }
 
@@ -369,6 +369,7 @@ public class DatabaseEngine implements Runnable {
             //int[] results = statement.executeBatch();
 
             for (String orderedBatch : orderedBatches) {
+                plugin.logger.logInfo("SQL: " + orderedBatch);
                 statement.execute(orderedBatch);
             }
 
@@ -558,9 +559,8 @@ public class DatabaseEngine implements Runnable {
 
                             if (groupCount == null) {
                                 groupCount = new GroupCount();
-                                groupMap.put(limit.limitGroup, groupCount);
-                            } else {
                                 groupCount.limit = limitGroup.limit;
+                                groupMap.put(limit.limitGroup, groupCount);
                             }
 
                             groupCount.value++;

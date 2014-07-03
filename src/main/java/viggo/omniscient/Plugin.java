@@ -410,6 +410,10 @@ public class Plugin extends JavaPlugin implements Listener {
             public void run() {
                 try {
 
+                    if (!settings.scanChunksPeriodicallyEnabled) {
+                        return;
+                    }
+
                     // only enqueue chunks if not already busy
                     if (!worldScannerState.compareAndSet(0, 1)) {
                         return;
@@ -801,7 +805,10 @@ public class Plugin extends JavaPlugin implements Listener {
 
     private void processLimitedBlockRemoval(Block block, String blockId, String worldName, Player player) {
 
+        //logger.logInfo("processLimitedBlockRemoval entry");
+
         if (!settings.blockLimitsEnabled) {
+            //logger.logInfo("processLimitedBlockRemoval exit 1");
             return;
         }
 
@@ -812,6 +819,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
         // do we have the players name whom placed the block?
         if (!playerToBlockCoordsMap.containsKey(blockKey)) {
+            //logger.logInfo("processLimitedBlockRemoval exit 2");
             return;
         }
 
@@ -827,6 +835,7 @@ public class Plugin extends JavaPlugin implements Listener {
         Map<String, ArrayList<BlockInfo>> map = groupAndInfos.blockMap;
 
         if (!map.containsKey(originallyPlacedBlockInfo.blockId)) {
+            // logger.logInfo("processLimitedBlockRemoval exit 3");
             return;
         }
 
@@ -855,14 +864,14 @@ public class Plugin extends JavaPlugin implements Listener {
                     GroupCount groupCount = groupMap.get(blockLimit.limitGroup);
                     if (groupCount != null) {
                         groupCount.value--;
-                        player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
+                        //player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                         groupCountValue = groupCount.value;
                         groupCountLimit = groupCount.limit;
                     } else {
-                        player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimit.limitGroup + ", groupMap.size(): " + groupMap.size());
+                        //player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimit.limitGroup + ", groupMap.size(): " + groupMap.size());
                     }
                 } else {
-                    player.sendMessage("blockLimit null");
+                    //player.sendMessage("blockLimit null");
                 }
 
 
@@ -873,7 +882,7 @@ public class Plugin extends JavaPlugin implements Listener {
         // remove from coordinate to player map as well
         playerToBlockCoordsMap.remove(blockKey);
 
-        player.sendMessage(String.format("block removed. groupCountValue: %d,  groupCountLimit: %d", groupCountValue, groupCountLimit));
+        //player.sendMessage(String.format("block removed. groupCountValue: %d,  groupCountLimit: %d", groupCountValue, groupCountLimit));
 
         if (settings.enablePlayerInfoOnBlockEvents) {
 
@@ -1044,12 +1053,26 @@ public class Plugin extends JavaPlugin implements Listener {
 
             GroupCount groupCount = null;
 
+            /* are we placing a block of this type for the first time, if so, the group map have likely not been initialized */
+            if (blockLimit.limitGroup != null && !groupMap.containsKey(blockLimit.limitGroup)) {
+                final BlockLimitGroup limitGroup = blockLimitGroups.get(blockLimit.limitGroup);
+
+                if (limitGroup != null) {
+                    groupCount = new GroupCount();
+                    groupCount.limit = limitGroup.limit;
+                    groupCount.value = 0;
+                    groupMap.put(blockLimit.limitGroup, groupCount);
+                }
+            }
+
             if (blockLimit.limitGroup != null && groupMap.containsKey(blockLimit.limitGroup)) {
                 groupCount = groupMap.get(blockLimit.limitGroup);
 
                 if (groupCount != null) {
                     groupCountValue = groupCount.value;
                     groupCountLimit = groupCount.limit;
+                } else {
+                    groupCountLimit = Integer.MAX_VALUE;
                 }
             }
 
@@ -1064,26 +1087,35 @@ public class Plugin extends JavaPlugin implements Listener {
 
             ArrayList<BlockInfo> blockList = map.get(blockIdAndSubValue);
 
+            int remaining = 0;
 
-            int remaining = Math.min(
-                    limit == -1 ? -1 : (limit - blockList.size()),
-                    groupCountLimit == -1 ? -1 : groupCountLimit - groupCountValue
-            );
+            if (groupCountLimit != Integer.MAX_VALUE) {
+                remaining = Math.min(
+                        limit == -1 ? -1 : (limit - blockList.size()),
+                        (groupCountLimit == -1 ? -1 : groupCountLimit - groupCountValue)
+                );
+                // event.getPlayer().sendMessage("set with group");
+            } else {
+                remaining = limit == -1 ? -1 : (limit - blockList.size());
+            }
+
+            // event.getPlayer().sendMessage("remaining: " + remaining + ", limit: " + limit + ", groupCountLimit: " + groupCountLimit);
 
 
             if (
-                    remaining > -1 // unlimited ?
-                            && (
-                            (blockList.size() + 1) > remaining // exceed block limit ?
-                                    || groupCountValue + 1 > remaining // exceed group limit ?
-                    )
+                    remaining != -1 && remaining < 1 // unlimited ?
+
+//                            && (
+//                            (blockList.size() + 1) > remaining // exceed block limit ?
+//                                    || groupCountValue + 1 > remaining // exceed group limit ?
+//                    )
                 //&& !event.getPlayer().isOp() // op ignores limits
                     ) {
 
                 event.setCancelled(true);
 
                 if (settings.enablePlayerInfoOnBlockEvents) {
-                    event.getPlayer().sendMessage("You cannot place more of that type of block. The maximum amount allowed is: " + limit);
+                    event.getPlayer().sendMessage("You cannot place more of that type of block");
                 }
 
                 return;
@@ -1095,7 +1127,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 if (groupCount != null) {
                     groupCount.value++;
-                    event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
+                    //event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                 }
 
                 // add to coordinate to player map
@@ -1105,7 +1137,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 databaseEngine.setBlockInfo(blockInfo);
 
                 if (limit > -1 && settings.enablePlayerInfoOnBlockEvents && (blockList.size() + 3) > limit) { // HOTFIX: show limit only when 5 or less remaining
-                    event.getPlayer().sendMessage("You can place an additional " + (limit - blockList.size()) + " of " + blockLimit.blockDisplayName + ".");
+                    event.getPlayer().sendMessage("You can place an additional " + remaining + " of " + blockLimit.blockDisplayName + ".");
                 }
             }
 
@@ -1134,7 +1166,11 @@ public class Plugin extends JavaPlugin implements Listener {
 
             Set<String> playerNames = playerBlocks.keySet();
             for (String playerName : playerNames) {
-                Collection<ArrayList<BlockInfo>> blockTypes = playerBlocks.get(playerName).blockMap.values();
+
+                final Map<String, ArrayList<BlockInfo>> map = playerBlocks.get(playerName).blockMap;
+                final Map<String, GroupCount> groupMap = playerBlocks.get(playerName).groupMap;
+
+                Collection<ArrayList<BlockInfo>> blockTypes = map.values();
                 for (ArrayList<BlockInfo> blockType : blockTypes) {
 
                     for (Iterator<?> it = blockType.iterator(); it.hasNext(); ) {
@@ -1162,6 +1198,16 @@ public class Plugin extends JavaPlugin implements Listener {
                             databaseEngine.deleteBlockInfo(blockInfoFromList);
                             it.remove();
 
+                            if (groupMap != null) {
+
+                                BlockLimit limit = blockLimits.get(blockInfoFromList.blockId);
+                                if (limit != null) {
+                                    final GroupCount groupCount = groupMap.get(limit.limitGroup);
+                                    if (groupCount != null) {
+                                        groupCount.value = Math.max(0, groupCount.value - 1);
+                                    }
+                                }
+                            }
 
                         } else {
                             // it was a non-air block, but is it the same block type that was originally placed?
@@ -1198,6 +1244,7 @@ public class Plugin extends JavaPlugin implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
 
         if (event.isCancelled()) {
+            logger.logInfo("onBlockBreak cancelled");
             return;
         }
 
