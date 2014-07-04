@@ -1086,6 +1086,10 @@ public class Plugin extends JavaPlugin implements Listener {
                 blockLimitFromSpecificOrRange = blockLimits.get(blockIdAndSubValue);
             }
 
+            if (!blockLimitFromSpecificOrRange.isLimitedInWorld(block.getWorld().getName())) {
+                return;
+            }
+
             String playerName = event.getPlayer().getName();
 
             // make sure there are maps for the player
@@ -1178,7 +1182,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 event.setCancelled(true);
 
                 if (settings.enablePlayerInfoOnBlockEvents) {
-                    event.getPlayer().sendMessage("You cannot place more of that type of block. Based on ");
+                    event.getPlayer().sendMessage("You cannot place more of that type of block. Based on limit id: " + blockLimitFromSpecificOrRange.id);
                 }
 
                 return;

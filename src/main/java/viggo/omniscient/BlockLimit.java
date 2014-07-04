@@ -31,4 +31,24 @@ public class BlockLimit implements Serializable {
     public String getBlockKey() {
         return blockId + ":" + subValue;
     }
+
+    public boolean isLimitedInWorld(String worldName) {
+        if (world != null) {
+
+            final String[] worldNames = world.split(",");
+
+            boolean foundAny = false;
+
+            for (String worldName_ : worldNames) {
+                if (worldName_.equals(worldName)) {
+                    foundAny = true;
+                    break;
+                }
+            }
+
+            return foundAny;
+        }
+
+        return true;
+    }
 }

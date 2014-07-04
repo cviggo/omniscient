@@ -102,8 +102,20 @@ public class WorldScannerEngine implements Runnable {
                                 }
 
                                 String blockId = blockTypeId + ":" + chunkSnapshot.getBlockData(x, y, z);
+                                String blockIdRange = blockTypeId + ":-1";
 
-                                if (blockLimits.containsKey(blockId)) {
+                                boolean foundAnySpecific = false;
+
+                                BlockLimit blockLimit = blockLimits.get(blockId);
+                                BlockLimit blockLimitRange = blockLimits.get(blockIdRange);
+
+                                if (!blockLimit.isLimitedInWorld(chunkSnapshot.getWorldName())
+                                        || !blockLimitRange.isLimitedInWorld(chunkSnapshot.getWorldName())) {
+                                    continue;
+                                }
+
+                                if (blockLimits.containsKey(blockId) || blockLimits.containsKey(blockIdRange)) {
+
 //                                    plugin.logInfo(
 //                                            String.format("Found a limited block (%s) at: %d, %d, %d.",
 //                                                    blockId, blockX, blockY, blockZ
