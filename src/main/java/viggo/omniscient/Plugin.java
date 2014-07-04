@@ -424,7 +424,7 @@ public class Plugin extends JavaPlugin implements Listener {
                     for (World world : worldList) {
                         final Chunk[] loadedChunks = world.getLoadedChunks();
                         for (Chunk loadedChunk : loadedChunks) {
-                            worldScannerEngine.queueChunkForScanning(loadedChunk, true, false);
+                            worldScannerEngine.queueChunkForScanning(loadedChunk, true, true);
                         }
                     }
 
@@ -777,7 +777,7 @@ public class Plugin extends JavaPlugin implements Listener {
                         databaseEngine.setBlockInfo(blockInfo);
                         message = "assigned the block to server";
                     } else {
-                        message = String.format("Mother earth owns this block (%s)", blockInfo.blockId);
+                        message = String.format("Mother earth owns this block (%s @ %s)", blockInfo.blockId, blockKey);
                     }
                 }
 
@@ -887,7 +887,7 @@ public class Plugin extends JavaPlugin implements Listener {
                     GroupCount groupCount = groupMap.get(blockLimitFromSpecificOrRange.limitGroup);
                     if (groupCount != null) {
                         groupCount.value--;
-                        player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
+                        //player.sendMessage(String.format("Decreased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                         groupCountValue = groupCount.value;
                         groupCountLimit = groupCount.limit;
                     } else {
@@ -1162,11 +1162,11 @@ public class Plugin extends JavaPlugin implements Listener {
                 remaining = blockLimitFromSpecificOrRange.limit == -1 ? -1 : (blockLimitFromSpecificOrRange.limit - blockList.size());
             }
 
-            event.getPlayer().sendMessage(
-                    "remaining: " + remaining +
-                            ", limit: " + blockLimitFromSpecificOrRange.limit +
-                            ", groupCountLimit: " + groupCountLimit
-            );
+//            event.getPlayer().sendMessage(
+//                    "remaining: " + remaining +
+//                            ", limit: " + blockLimitFromSpecificOrRange.limit +
+//                            ", groupCountLimit: " + groupCountLimit
+//            );
 
 
             if (
@@ -1194,7 +1194,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 if (groupCount != null) {
                     groupCount.value++;
-                    event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
+                    //event.getPlayer().sendMessage(String.format("Increased groupCount. Now %d of %d", groupCount.value, groupCount.limit));
                 }
 
                 // add to coordinate to player map

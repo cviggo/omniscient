@@ -104,13 +104,12 @@ public class WorldScannerEngine implements Runnable {
                                 String blockId = blockTypeId + ":" + chunkSnapshot.getBlockData(x, y, z);
                                 String blockIdRange = blockTypeId + ":-1";
 
-                                boolean foundAnySpecific = false;
-
                                 BlockLimit blockLimit = blockLimits.get(blockId);
                                 BlockLimit blockLimitRange = blockLimits.get(blockIdRange);
 
-                                if (!blockLimit.isLimitedInWorld(chunkSnapshot.getWorldName())
-                                        || !blockLimitRange.isLimitedInWorld(chunkSnapshot.getWorldName())) {
+                                if (blockLimit != null && !blockLimit.isLimitedInWorld(chunkSnapshot.getWorldName())
+                                        || blockLimitRange != null && !blockLimitRange.isLimitedInWorld(chunkSnapshot.getWorldName())) {
+                                    //plugin.logger.logInfo("skipping block due to world: " + chunkSnapshot.getWorldName());
                                     continue;
                                 }
 
