@@ -1004,14 +1004,14 @@ public class Plugin extends JavaPlugin implements Listener {
                 Block blockAgainst = event.getBlockAgainst();
                 String blockIdAgainst = getBlockIdFromBlock(blockAgainst);
 
-                event.getPlayer().sendMessage("Your holding: "
-                                + event.getPlayer().getItemInHand().getType().getId()
-                                + ":" + event.getItemInHand().getType().name()
-                                + "_" + blockIdAgainst
-                );
-
-
                 if (blockLimits.containsKey(blockIdAgainst)) {
+
+                    event.getPlayer().sendMessage("Your holding: "
+                                    + event.getPlayer().getItemInHand().getType().getId()
+                                    + ":" + event.getItemInHand().getType().name()
+                                    + "_" + blockIdAgainst
+                    );
+
                     event.setCancelled(true);
                     return;
                 }

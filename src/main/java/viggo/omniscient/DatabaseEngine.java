@@ -546,7 +546,7 @@ public class DatabaseEngine implements Runnable {
 
                     BlockLimit blockLimitFromSpecificOrRange;
 
-                    String blockIdRange = blockInfo.blockId.substring(0, blockInfo.blockId.indexOf(":") - 1) + ":-1";
+                    String blockIdRange = blockInfo.blockId.substring(0, blockInfo.blockId.indexOf(":")) + ":-1";
 
                     if (limits.containsKey(blockIdRange)) {
                         plugin.logger.logInfo("found range id: " + blockIdRange);
@@ -577,6 +577,8 @@ public class DatabaseEngine implements Runnable {
                             groupCount.value++;
                         }
                     } else {
+                        String message = String.format("blockIdRange: %s", blockIdRange);
+                        plugin.logger.logWarn(message);
                         return new HashMap<String, BlockGroupAndInfos>();
                         //throw new Exception();
                     }
