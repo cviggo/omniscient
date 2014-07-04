@@ -710,7 +710,12 @@ public class Plugin extends JavaPlugin implements Listener {
             }
 
             // TODO: include damage / sub value
-            if (!settings.interactionToolEnabled || event.getPlayer().getItemInHand().getTypeId() != settings.interactionToolItemId) {
+            if (!settings.interactionToolEnabled ||
+
+                    (event.getPlayer().getItemInHand().getTypeId() != settings.interactionToolItemId
+                            && event.getPlayer().getItemInHand().getTypeId() != 290 // wooden hoe
+
+                    )) {
                 return;
             }
 
@@ -760,11 +765,20 @@ public class Plugin extends JavaPlugin implements Listener {
             } else {
 
                 if (owner != null) {
-                    message = String.format("The position is owned by: %s.",
-                            owner != null ? owner : "unknown"
+                    message = String.format("The position is owned by: %s. (%s @ %s)",
+                            owner != null ? owner : "unknown", blockInfo.blockId, blockKey
                     );
                 } else {
-                    message = String.format("Mother earth owns this block (%s)", blockInfo.blockId);
+
+                    // HACK: assign to server if wooden hoe tool
+                    if (event.getPlayer().isOp() && event.getPlayer().getItemInHand().getTypeId() == 290) {
+                        blockInfo.placedBy = "server";
+                        blockInfo.placedWhen = new Date();
+                        databaseEngine.setBlockInfo(blockInfo);
+                        message = "assigned the block to server";
+                    } else {
+                        message = String.format("Mother earth owns this block (%s)", blockInfo.blockId);
+                    }
                 }
 
             }
@@ -1164,7 +1178,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 event.setCancelled(true);
 
                 if (settings.enablePlayerInfoOnBlockEvents) {
-                    event.getPlayer().sendMessage("You cannot place more of that type of block");
+                    event.getPlayer().sendMessage("You cannot place more of that type of block. Based on ");
                 }
 
                 return;

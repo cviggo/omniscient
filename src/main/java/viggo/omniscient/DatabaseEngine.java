@@ -88,7 +88,7 @@ public class DatabaseEngine implements Runnable {
 
                         updateBlockInfos();
                         updateBlockStats();
-                        //updateBlockLimits();
+                        updateBlockLimits();
 
 
                         if (this.state != DataBaseEngineState.Running) {
@@ -184,53 +184,53 @@ public class DatabaseEngine implements Runnable {
         }
     }
 
-//    private void updateBlockLimits() throws SQLException {
-//        if (blockLimitsToUpdate.size() > 0) {
-//            Statement statement = conn.createStatement();
-//
-//            while (true) {
-//                final UpdateTask<BlockLimit> updateTask = blockLimitsToUpdate.poll();
-//
-//                if (updateTask == null || updateTask.t == null) {
-//                    break;
-//                }
-//
-//                final BlockLimit blockLimit = updateTask.t;
-//                String sql = null;
-//
-//                switch (updateTask.type) {
-//
-//                    case Save:
-//
-//                        sql = String.format(
-//                                "INSERT INTO BlockLimit (`limit`, `limitGroup`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, %d, %d, %d, '%s')",
-//                                blockLimit.limit,
-//                                blockLimit.groupLimit,
-//                                blockLimit.blockId,
-//                                blockLimit.subValue,
-//                                blockLimit.blockDisplayName
-//                        );
-//
-//                        statement.addBatch(sql);
-//                        break;
-//
-//                    case Delete:
-//                        sql = String.format(
-//                                "DELETE FROM BlockLimit WHERE (`blockId` = '%s' AND `subValue` = %d)",
-//                                blockLimit.blockId,
-//                                blockLimit.subValue
-//                        );
-//
-//                        statement.addBatch(sql);
-//                        break;
-//                }
-//            }
-//
-//            int[] results = statement.executeBatch();
-//
-//            plugin.logger.logInfo(String.format("processed %d block limits", results.length));
-//        }
-//    }
+    private void updateBlockLimits() throws SQLException {
+        if (blockLimitsToUpdate.size() > 0) {
+            Statement statement = conn.createStatement();
+
+            while (true) {
+                final UpdateTask<BlockLimit> updateTask = blockLimitsToUpdate.poll();
+
+                if (updateTask == null || updateTask.t == null) {
+                    break;
+                }
+
+                final BlockLimit blockLimit = updateTask.t;
+                String sql = null;
+
+                switch (updateTask.type) {
+
+                    case Save:
+
+                        sql = String.format(
+                                "INSERT INTO BlockLimit (`limit`, `limitGroup`, `blockId`, `subValue`, `blockDisplayName`) VALUES (%d, '%s', %d, %d, '%s')",
+                                blockLimit.limit,
+                                blockLimit.limitGroup,
+                                blockLimit.blockId,
+                                blockLimit.subValue,
+                                blockLimit.blockDisplayName
+                        );
+
+                        statement.addBatch(sql);
+                        break;
+
+                    case Delete:
+                        sql = String.format(
+                                "DELETE FROM BlockLimit WHERE (`blockId` = '%s' AND `subValue` = %d)",
+                                blockLimit.blockId,
+                                blockLimit.subValue
+                        );
+
+                        statement.addBatch(sql);
+                        break;
+                }
+            }
+
+            int[] results = statement.executeBatch();
+
+            plugin.logger.logInfo(String.format("processed %d block limits", results.length));
+        }
+    }
 
     private void updateBlockInfos() throws SQLException {
         if (blockInfosToUpdate.size() > 0) {
@@ -549,7 +549,7 @@ public class DatabaseEngine implements Runnable {
                     String blockIdRange = blockInfo.blockId.substring(0, blockInfo.blockId.indexOf(":")) + ":-1";
 
                     if (limits.containsKey(blockIdRange)) {
-                        plugin.logger.logInfo("found range id: " + blockIdRange);
+                        //plugin.logger.logInfo("found range id: " + blockIdRange);
                         blockLimitFromSpecificOrRange = limits.get(blockIdRange);
                     } else {
                         blockLimitFromSpecificOrRange = limits.get(blockInfo.blockId);
@@ -577,9 +577,9 @@ public class DatabaseEngine implements Runnable {
                             groupCount.value++;
                         }
                     } else {
-                        String message = String.format("blockIdRange: %s", blockIdRange);
-                        plugin.logger.logWarn(message);
-                        return new HashMap<String, BlockGroupAndInfos>();
+                        //String message = String.format("blockIdRange: %s", blockIdRange);
+                        //plugin.logger.logWarn(message);
+                        //return new HashMap<String, BlockGroupAndInfos>();
                         //throw new Exception();
                     }
 

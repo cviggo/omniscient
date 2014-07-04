@@ -679,6 +679,25 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 
                 return true;
             }
+
+//            if (isCommand(args, r, "assign")) {
+//                final String assigntTo = r.getString(0);
+//
+//                final Block block = sender.getServer().getPlayer(sender.getName()).getTargetBlock(null, 100);
+//
+//                BlockInfo blockInfo = new BlockInfo(0, plugin.getBlockIdFromBlock(block), block.getWorld().getName(), block.getX(), block.getY(), block.getZ(), assigntTo, new Date());
+//
+//                final String blockKey = plugin.getBlockKeyFromInfo(blockInfo);
+//
+//                // HACK: only support unassigned
+//                if(!plugin.playerToBlockCoordsMap.containsKey(blockKey)){
+//                    plugin.databaseEngine.setBlockInfo(blockInfo);
+//                }
+//
+//                return true;
+//            }
+
+
             if (isCommand(args, r, "forceRun")) {
                 plugin.setState(PluginState.Running);
                 return true;
