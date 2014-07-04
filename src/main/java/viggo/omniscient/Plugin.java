@@ -883,7 +883,7 @@ public class Plugin extends JavaPlugin implements Listener {
                     blockLimitFromSpecificOrRange = blockLimits.get(blockInfoRemoved.blockId);
                 }
 
-                if (blockLimitFromSpecificOrRange != null) {
+                if (blockLimitFromSpecificOrRange != null && blockLimitFromSpecificOrRange.limitGroup != null) {
                     GroupCount groupCount = groupMap.get(blockLimitFromSpecificOrRange.limitGroup);
                     if (groupCount != null) {
                         groupCount.value--;
@@ -891,7 +891,7 @@ public class Plugin extends JavaPlugin implements Listener {
                         groupCountValue = groupCount.value;
                         groupCountLimit = groupCount.limit;
                     } else {
-                        player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimitFromSpecificOrRange.limitGroup + ", groupMap.size(): " + groupMap.size());
+                        //player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimitFromSpecificOrRange.limitGroup + ", groupMap.size(): " + groupMap.size());
                     }
                 } else {
                     player.sendMessage("blockLimit null");
@@ -1176,7 +1176,7 @@ public class Plugin extends JavaPlugin implements Listener {
 //                            (blockList.size() + 1) > remaining // exceed block limit ?
 //                                    || groupCountValue + 1 > remaining // exceed group limit ?
 //                    )
-                //&& !event.getPlayer().isOp() // op ignores limits
+                            && !event.getPlayer().isOp() // op ignores limits
                     ) {
 
                 event.setCancelled(true);
