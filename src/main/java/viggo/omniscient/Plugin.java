@@ -918,41 +918,41 @@ public class Plugin extends JavaPlugin implements Listener {
 
             if (remaining > -1 && remaining < 3) {
 
-            if (originallyPlacedBlockInfo.placedBy.equals(player.getName())) {
-                // players own block
+                if (originallyPlacedBlockInfo.placedBy.equals(player.getName())) {
+                    // players own block
 
-                String remainingStr = (blockLimitFromSpecificOrRange != null ? (limit - blockList.size()) + "" : "unknown");
+                    String remainingStr = (blockLimitFromSpecificOrRange != null ? (limit - blockList.size()) + "" : "unknown");
 
-                player.sendMessage(
-                        "Removed " + (blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown")
-                                + ". You now have " + remainingStr + " remaining."
-                );
-
-            } else {
-
-
-                // another players block
-                String toPlayer = String.format("Removed %s. %s now has %d remaining.",
-                        blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown",
-                        originallyPlacedBlockInfo != null ? originallyPlacedBlockInfo.placedBy : "unknown",
-                        remaining);
-
-                player.sendMessage(toPlayer);
-
-
-                // is playerNameWhomPlacedTheBlock online - if so, tell the player?
-                final Player player2 = getServer().getPlayer(originallyPlacedBlockInfo.placedBy);
-                if (player2 != null) {
-                    player2.sendMessage(
-                            String.format(
-                                    "%s removed your %s. You now have %d remaining.",
-                                    player.getName(),
-                                    blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown",
-                                    remaining
-                            )
+                    player.sendMessage(
+                            "Removed " + (blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown")
+                                    + ". You now have " + remainingStr + " remaining."
                     );
+
+                } else {
+
+
+                    // another players block
+                    String toPlayer = String.format("Removed %s. %s now has %d remaining.",
+                            blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown",
+                            originallyPlacedBlockInfo != null ? originallyPlacedBlockInfo.placedBy : "unknown",
+                            remaining);
+
+                    player.sendMessage(toPlayer);
+
+
+                    // is playerNameWhomPlacedTheBlock online - if so, tell the player?
+                    final Player player2 = getServer().getPlayer(originallyPlacedBlockInfo.placedBy);
+                    if (player2 != null) {
+                        player2.sendMessage(
+                                String.format(
+                                        "%s removed your %s. You now have %d remaining.",
+                                        player.getName(),
+                                        blockLimitFromSpecificOrRange != null ? blockLimitFromSpecificOrRange.blockDisplayName : "unknown",
+                                        remaining
+                                )
+                        );
+                    }
                 }
-            }
             }
         }
     }
@@ -986,17 +986,18 @@ public class Plugin extends JavaPlugin implements Listener {
             // HACK: support gregtech blocks
             int blockId;
             int blockSubValue;
-            if (event.getBlock().getType().getId() != 2271) {
+            int typeId = event.getBlock().getType().getId();
+            //if (typeId != 2271 && typeId != 2444 && typeId != 2446 && typeId != 2447) {
 
-                blockId = block.getType().getId();
-                blockSubValue = (int) block.getData();
-            } else {
-                blockId = event.getItemInHand().getTypeId();
-                blockSubValue = (int) event.getItemInHand().getData().getData();
-            }
-
+            blockId = block.getType().getId();
+            blockSubValue = (int) block.getData();
+//            } else {
+//                blockId = event.getItemInHand().getTypeId();
+//                blockSubValue = (int) event.getItemInHand().getData().getData();
+//            }
             String blockIdAndSubValue = blockId + ":" + blockSubValue;
             String blockIdRange = blockId + ":-1";
+
 
             if (event.getItemInHand().getType().getId() == 10259) { // builders wand
 
@@ -1020,25 +1021,42 @@ public class Plugin extends JavaPlugin implements Listener {
             // skip if block is not limited
             if (!blockLimits.containsKey(blockIdAndSubValue) && !blockLimits.containsKey(blockIdRange)) {
 
-                // do not track vanilla / mined blocks
-                if (!settings.blockStatsEnabled || blockId < 256) {
-                    return;
-                }
+                /* hotfix: if placed block is not limited - how about the one in hand?
+                * this supports gregtech, mekanism and likely other mods which also
+                * changes the sub value during placement.
+                * */
 
-                // add to block stats
-                if (blockStats.containsKey(blockIdAndSubValue)) {
-                    BlockStat blockStat = blockStats.get(blockIdAndSubValue);
-                    blockStat.current++;
-                    blockStat.placed++;
-                    databaseEngine.setBlockStat(blockStat);
+                int blockIdInHand = event.getItemInHand().getTypeId();
+                int blockSubValueInHand = (int) event.getItemInHand().getData().getData();
+                String blockIdAndSubValueInHand = blockIdInHand + ":" + blockSubValueInHand;
+
+                if (blockLimits.containsKey(blockIdAndSubValueInHand)) {
+                    blockId = blockIdInHand;
+                    blockSubValue = blockSubValueInHand;
+                    blockIdAndSubValue = blockIdAndSubValueInHand;
 
                 } else {
-                    final BlockStat blockStat = new BlockStat(-1, 1, 1, 0, blockId, blockSubValue, false);
-                    blockStats.put(blockIdAndSubValue, blockStat);
-                    databaseEngine.setBlockStat(blockStat);
-                }
 
-                return;
+                    // do not track vanilla / mined blocks
+                    if (!settings.blockStatsEnabled || blockId < 256) {
+                        return;
+                    }
+
+                    // add to block stats
+                    if (blockStats.containsKey(blockIdAndSubValue)) {
+                        BlockStat blockStat = blockStats.get(blockIdAndSubValue);
+                        blockStat.current++;
+                        blockStat.placed++;
+                        databaseEngine.setBlockStat(blockStat);
+
+                    } else {
+                        final BlockStat blockStat = new BlockStat(-1, 1, 1, 0, blockId, blockSubValue, false);
+                        blockStats.put(blockIdAndSubValue, blockStat);
+                        databaseEngine.setBlockStat(blockStat);
+                    }
+
+                    return;
+                }
             }
 
             if (!settings.blockLimitsEnabled) {
