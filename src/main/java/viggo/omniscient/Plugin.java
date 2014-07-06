@@ -212,14 +212,17 @@ public class Plugin extends JavaPlugin implements Listener {
 
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
 
-                        logger.logWarn(String.format("Removing block of type: %s @ %s:%d.%d.%d",
-                                        blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
-                        );
-
-
                         World world = getServer().getWorld(blockInfo.world);
 
                         Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
+
+//                        if (block.getTypeId() == 85){
+//                            continue;
+//                        }
+
+                        logger.logWarn(String.format("Removing block of type: %s @ %s:%d.%d.%d",
+                                        blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
+                        );
 
                         block.setType(Material.AIR);
                     }
@@ -894,7 +897,7 @@ public class Plugin extends JavaPlugin implements Listener {
                         //player.sendMessage("groupCount null. blockLimit.limitGroup: " + blockLimitFromSpecificOrRange.limitGroup + ", groupMap.size(): " + groupMap.size());
                     }
                 } else {
-                    player.sendMessage("blockLimit null");
+                    //player.sendMessage("blockLimit null");
                 }
 
 

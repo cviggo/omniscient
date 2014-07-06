@@ -411,7 +411,7 @@ public class DatabaseEngine implements Runnable {
 
             int[] results = statement.executeBatch();
 
-            plugin.logger.logInfo(String.format("processed %d block stats", results.length));
+            //plugin.logger.logInfo(String.format("processed %d block stats", results.length));
 
         }
     }
