@@ -1,9 +1,6 @@
 package viggo.omniscient;
 
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
@@ -697,6 +694,38 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 //                return true;
 //            }
 
+
+            if (isCommand(args, r, "kickall")) {
+
+                final Server server = sender.getServer();
+                final Player[] onlinePlayers = server.getOnlinePlayers();
+                for (Player onlinePlayer : onlinePlayers) {
+
+                    // skip player if not equals the online player
+                    if (onlinePlayer.getName().equals(sender.getName())) {
+                        continue;
+                    }
+                    onlinePlayer.kickPlayer("Kicked by admin. Either we are working on stuff or you got kicked for another reason. :)");
+                }
+
+                return true;
+            }
+
+            if (isCommand(args, r, "kicknonop")) {
+
+                final Server server = sender.getServer();
+                final Player[] onlinePlayers = server.getOnlinePlayers();
+                for (Player onlinePlayer : onlinePlayers) {
+
+                    // skip player if op
+                    if (onlinePlayer.getName().equals(sender.getName()) || onlinePlayer.isOp()) {
+                        continue;
+                    }
+                    onlinePlayer.kickPlayer("Kicked by admin. Either we are working on stuff or you got kicked for another reason. :)");
+                }
+
+                return true;
+            }
 
             if (isCommand(args, r, "forceRun")) {
                 plugin.setState(PluginState.Running);
