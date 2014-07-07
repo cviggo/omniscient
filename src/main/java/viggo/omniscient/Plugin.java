@@ -179,6 +179,10 @@ public class Plugin extends JavaPlugin implements Listener {
         }.runTaskTimer(this, TICKS_PER_SECOND * 10, TICKS_PER_SECOND * notificationIntervalSeconds);
     }
 
+    public boolean isBlockLimitedAndUnknown(BlockInfo blockInfo) {
+        return blockLimits.containsKey(blockInfo.blockId) && !playerToBlockCoordsMap.containsKey(getBlockKeyFromInfo(blockInfo));
+    }
+
     public boolean processUnknownBlocks() {
 
         // CAS to prevent reentry / buildup by commands and/or schedule
@@ -200,7 +204,6 @@ public class Plugin extends JavaPlugin implements Listener {
                     return true;
                 }
 
-
                 if (settings.autoRemoveUnknownBlocksEnabled) {
 
                     while (unknownBlocksFound.size() > 0) {
@@ -211,6 +214,11 @@ public class Plugin extends JavaPlugin implements Listener {
                         }
 
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
+
+                        // perform a safety check that the block is still unknown
+                        if (!isBlockLimitedAndUnknown(blockInfo)) {
+                            continue;
+                        }
 
                         World world = getServer().getWorld(blockInfo.world);
 
@@ -243,6 +251,11 @@ public class Plugin extends JavaPlugin implements Listener {
 
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
 
+                        // perform a safety check that the block is still unknown
+                        if (!isBlockLimitedAndUnknown(blockInfo)) {
+                            continue;
+                        }
+
                         if (settings.autoReplaceUnknownBlocksId < 0) {
                             continue;
                         }
@@ -271,6 +284,11 @@ public class Plugin extends JavaPlugin implements Listener {
                         }
 
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
+
+                        // perform a safety check that the block is still unknown
+                        if (!isBlockLimitedAndUnknown(blockInfo)) {
+                            continue;
+                        }
 
                         logger.logWarn(String.format("Replacing block of type: %s @ %s:%d.%d.%d with a sign.",
                                         blockInfo.blockId, blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z)
@@ -332,6 +350,10 @@ public class Plugin extends JavaPlugin implements Listener {
 
                         final BlockInfo blockInfo = unknownBlocksFound.poll();
 
+                        // perform a safety check that the block is still unknown
+                        if (!isBlockLimitedAndUnknown(blockInfo)) {
+                            continue;
+                        }
 
                         String playerName = "FakePlayer";
                         blockInfo.placedBy = playerName;
