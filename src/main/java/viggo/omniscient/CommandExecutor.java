@@ -732,6 +732,23 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
+//            if (isCommand(args, r, "istat")) {
+//                final Player player = (Player) sender;
+//                final ItemStack itemInHand = player.getItemInHand();
+//                final short durability = itemInHand.getDurability();
+//                player.sendMessage("d: " + durability);
+//                return true;
+//            }
+//
+//            if (isCommand(args, r, "istats")) {
+//                final Player player = (Player) sender;
+//                player.getItemInHand().setDurability((short)40);
+//                final short durability = player.getItemInHand().getDurability();
+//                player.sendMessage("d: " + durability);
+//
+//                return true;
+//            }
+
         } catch (Throwable throwable) {
             plugin.logger.logSevere(throwable);
             sender.sendMessage(throwable.getMessage());

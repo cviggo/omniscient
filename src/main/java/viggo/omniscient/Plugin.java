@@ -734,6 +734,11 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
+            // HACK: ignore events for non-ops
+            if (!event.getPlayer().isOp()) {
+                return;
+            }
+
             // TODO: include damage / sub value
             if (!settings.interactionToolEnabled ||
 
