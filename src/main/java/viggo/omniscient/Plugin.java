@@ -208,7 +208,7 @@ public class Plugin extends JavaPlugin implements Listener {
         event.setJoinMessage(null);
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerQuit(PlayerQuitEvent event) {
         logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
@@ -219,7 +219,7 @@ public class Plugin extends JavaPlugin implements Listener {
         event.setQuitMessage(null);
     }
 
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit2(PlayerQuitEvent event) {
         logger.logInfo("onPlayerQuit2: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
