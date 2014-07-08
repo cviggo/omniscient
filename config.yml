@@ -76,6 +76,10 @@ scanChunksPeriodicallyIntervalSeconds: 600
 scanChunksMinimumIntervalForSameChunkSeconds: 600
 
 
+# online players limits
+onlinePlayersLimitMembers: 35
+onlinePlayersLimitSupporters: 50
+
 
 # omniscient will not even process events of any ids added here (use this if
 blockIdEventBlackList: 0

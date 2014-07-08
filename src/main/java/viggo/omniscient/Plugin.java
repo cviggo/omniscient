@@ -163,8 +163,8 @@ public class Plugin extends JavaPlugin implements Listener {
 
                     logger.logInfo("onPlayerLogin (RUN)");
 
-                    int memberLimit = 1;
-                    int supporterLimit = 1;
+                    int memberLimit = settings.onlinePlayersLimitMembers;
+                    int supporterLimit = settings.onlinePlayersLimitSupporters;
 
                     final int onlinePlayerCount = getServer().getOnlinePlayers().length;
 
@@ -186,7 +186,6 @@ public class Plugin extends JavaPlugin implements Listener {
                     } else {
                         player.kickPlayer("Server is full. Limit for supporters is: " + supporterLimit);
                     }
-
                 }
 
             }.runTaskLater(this, 20);

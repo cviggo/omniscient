@@ -45,6 +45,9 @@ public class Settings implements Serializable {
     public int interactionToolItemId;
     public int interactionToolItemSubValue;
     public boolean broadcastOnSoundDisablingEnabled;
+    public int onlinePlayersLimitMembers;
+    public int onlinePlayersLimitSupporters;
+
     private Plugin plugin;
 
 
@@ -128,6 +131,8 @@ public class Settings implements Serializable {
         this.interactionToolItemId = getInt("interactionToolItemId");
         this.interactionToolItemSubValue = getInt("interactionToolItemSubValue");
 
+        this.onlinePlayersLimitMembers = getInt("onlinePlayersLimitMembers");
+        this.onlinePlayersLimitSupporters = getInt("onlinePlayersLimitSupporters");
     }
 
     private void verifyKeysPresent() throws Exception {
