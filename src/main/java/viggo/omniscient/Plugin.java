@@ -59,6 +59,7 @@ public class Plugin extends JavaPlugin implements Listener {
     private BukkitTask tickSchedule;
     private ProtocolHook protocolHook;
     private Date lastBroadcast = new Date();
+    private ConcurrentHashMap<String, Object> _limitKickedPlayers;
 
     public void onDisable() {
         logger.logInfo("Disable invoked. Stopping engines.");
@@ -197,20 +198,25 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        logger.logInfo("onPlayerJoin: " + event.getPlayer().getName());
+
+        logger.logInfo("onPlayerJoin: " + event.getPlayer().getName() + ", " + _limitKickedPlayers.size());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             logger.logInfo("setting join message");
             event.setJoinMessage(null);
         }
+
+        event.setJoinMessage(null);
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
         logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             logger.logInfo("setting quit message");
             event.setQuitMessage(null);
         }
+
+        event.setQuitMessage(null);
     }
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {
@@ -724,6 +730,8 @@ public class Plugin extends JavaPlugin implements Listener {
     }
 
     public void reloadData(boolean ignoreEmptyBlocks) throws Exception {
+
+        _limitKickedPlayers = new ConcurrentHashMap<String, Object>();
 
         blockLimits = databaseEngine.getBlockLimits();
 
