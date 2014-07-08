@@ -157,7 +157,10 @@ public class Plugin extends JavaPlugin implements Listener {
 
                 @Override
                 public void run() {
-                    player.kickPlayer("owned");
+                    if (getServer().getOnlinePlayers().length > 41) {
+                        player.kickPlayer("Server is full. Try again later.");
+
+                    }
                 }
 
             }.runTaskLater(this, 20);
