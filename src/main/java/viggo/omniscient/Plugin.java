@@ -153,7 +153,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            logger.logInfo("onPlayerLogin: " + event.getPlayer().getName());
+            //logger.logInfo("onPlayerLogin: " + event.getPlayer().getName());
 
             final Plugin plugin = this;
 
@@ -162,7 +162,7 @@ public class Plugin extends JavaPlugin implements Listener {
                 @Override
                 public void run() {
 
-                    logger.logInfo("onPlayerLogin (RUN)");
+                    //logger.logInfo("onPlayerLogin (RUN)");
 
                     int memberLimit = settings.onlinePlayersLimitMembers;
                     int supporterLimit = settings.onlinePlayersLimitSupporters;
@@ -180,7 +180,7 @@ public class Plugin extends JavaPlugin implements Listener {
                     }
 
                     player.setMetadata("OmniscientLimitKick", new FixedMetadataValue(plugin, true));
-                    logger.logInfo("altering join and quit message");
+                    //logger.logInfo("altering join and quit message");
 
                     if (!isSupporter) {
                         player.kickPlayer("Server is full. Limit for members is: " + memberLimit);
@@ -199,35 +199,31 @@ public class Plugin extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerJoin(PlayerJoinEvent event) {
 
-        logger.logInfo("onPlayerJoin: " + event.getPlayer().getName() + ", " + _limitKickedPlayers.size());
+        //logger.logInfo("onPlayerJoin: " + event.getPlayer().getName() + ", " + _limitKickedPlayers.size());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
-            logger.logInfo("setting join message");
+            //logger.logInfo("setting join message");
             event.setJoinMessage(null);
         }
 
-        event.setJoinMessage(null);
+        //event.setJoinMessage(null);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
+        //logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
-            logger.logInfo("setting quit message");
+            //logger.logInfo("setting quit message");
             event.setQuitMessage(null);
         }
-
-        event.setQuitMessage(null);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit2(PlayerQuitEvent event) {
-        logger.logInfo("onPlayerQuit2: " + event.getPlayer().getName());
+        //logger.logInfo("onPlayerQuit2: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
-            logger.logInfo("setting quit message");
+            //logger.logInfo("setting quit message");
             event.setQuitMessage(null);
         }
-
-        event.setQuitMessage(null);
     }
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {
