@@ -152,6 +152,8 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
+            logger.logInfo("onPlayerLogin: " + event.getPlayer().getName());
+
             final Plugin plugin = this;
 
             new BukkitRunnable() {
@@ -159,8 +161,10 @@ public class Plugin extends JavaPlugin implements Listener {
                 @Override
                 public void run() {
 
-                    int memberLimit = 35;
-                    int supporterLimit = 50;
+                    logger.logInfo("onPlayerLogin (RUN)");
+
+                    int memberLimit = 1;
+                    int supporterLimit = 1;
 
                     final int onlinePlayerCount = getServer().getOnlinePlayers().length;
 
@@ -175,6 +179,7 @@ public class Plugin extends JavaPlugin implements Listener {
                     }
 
                     player.setMetadata("OmniscientLimitKick", new FixedMetadataValue(plugin, true));
+                    logger.logInfo("altering join and quit message");
 
                     if (!isSupporter) {
                         player.kickPlayer("Server is full. Limit for members is: " + memberLimit);
@@ -191,16 +196,20 @@ public class Plugin extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerJoin(PlayerJoinEvent event) {
+        logger.logInfo("onPlayerJoin: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
+            logger.logInfo("setting join message");
             event.setJoinMessage(null);
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerQuit(PlayerQuitEvent event) {
+        logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
+            logger.logInfo("setting quit message");
             event.setQuitMessage(null);
         }
     }
