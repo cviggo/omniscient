@@ -17,6 +17,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -151,16 +152,37 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            //event.disallow(PlayerLoginEvent.Result.KICK_FULL, "Omniscient says: try again later!");
+            final Set<PermissionAttachmentInfo> effectivePermissions = player.getEffectivePermissions();
+            for (PermissionAttachmentInfo effectivePermission : effectivePermissions) {
+                logger.logInfo(effectivePermission.getPermission());
+            }
 
             new BukkitRunnable() {
 
                 @Override
                 public void run() {
-                    if (getServer().getOnlinePlayers().length > 41) {
-                        player.kickPlayer("Server is full. Try again later.");
 
+                    int memberLimit = 35;
+                    int supporterLimit = 50;
+
+                    final int onlinePlayerCount = getServer().getOnlinePlayers().length;
+
+                    final boolean isSupporter = player.hasPermission("group.supporter_1");
+
+                    if (isSupporter && onlinePlayerCount <= supporterLimit) {
+                        return;
                     }
+
+                    if (onlinePlayerCount <= memberLimit) {
+                        return;
+                    }
+
+                    if (!isSupporter) {
+                        player.kickPlayer("Server is full. Limit for members is: " + memberLimit);
+                    } else {
+                        player.kickPlayer("Server is full. Limit for supporters is: " + supporterLimit);
+                    }
+
                 }
 
             }.runTaskLater(this, 20);
