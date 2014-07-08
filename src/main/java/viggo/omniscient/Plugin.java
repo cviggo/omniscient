@@ -151,7 +151,16 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            event.disallow(PlayerLoginEvent.Result.KICK_FULL, "Omniscient says: try again later!");
+            //event.disallow(PlayerLoginEvent.Result.KICK_FULL, "Omniscient says: try again later!");
+
+            new BukkitRunnable() {
+
+                @Override
+                public void run() {
+                    player.kickPlayer("owned");
+                }
+
+            }.runTaskLater(this, 20);
 
         } catch (Exception e) {
             logger.logSevere(e);
