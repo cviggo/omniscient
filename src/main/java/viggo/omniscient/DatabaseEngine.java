@@ -228,7 +228,7 @@ public class DatabaseEngine implements Runnable {
 
             int[] results = statement.executeBatch();
 
-            plugin.logger.logInfo(String.format("processed %d block limits", results.length));
+            //plugin.logger.logInfo(String.format("processed %d block limits", results.length));
         }
     }
 
@@ -365,17 +365,17 @@ public class DatabaseEngine implements Runnable {
                 }
             }
 
-            plugin.logger.logInfo("Begin info batch");
+            //plugin.logger.logInfo("Begin info batch");
             //int[] results = statement.executeBatch();
 
             for (String orderedBatch : orderedBatches) {
-                plugin.logger.logInfo("SQL: " + orderedBatch);
+                //plugin.logger.logInfo("SQL: " + orderedBatch);
                 statement.execute(orderedBatch);
             }
 
-            plugin.logger.logInfo("End info batch");
+            //plugin.logger.logInfo("End info batch");
 
-            plugin.logger.logInfo(String.format("processed %d block infos", itemsProcessed));
+            //plugin.logger.logInfo(String.format("processed %d block infos", itemsProcessed));
         }
     }
 
