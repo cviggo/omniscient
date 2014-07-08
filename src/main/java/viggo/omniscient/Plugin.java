@@ -17,7 +17,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -150,11 +149,6 @@ public class Plugin extends JavaPlugin implements Listener {
 
             if (player.isOp()) {
                 return;
-            }
-
-            final Set<PermissionAttachmentInfo> effectivePermissions = player.getEffectivePermissions();
-            for (PermissionAttachmentInfo effectivePermission : effectivePermissions) {
-                logger.logInfo(effectivePermission.getPermission());
             }
 
             new BukkitRunnable() {
