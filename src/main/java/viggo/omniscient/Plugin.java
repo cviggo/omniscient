@@ -151,6 +151,10 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
+            if (player.hasPermission("omniscient.bypassloginlimit")) {
+                return;
+            }
+
             new BukkitRunnable() {
 
                 @Override
