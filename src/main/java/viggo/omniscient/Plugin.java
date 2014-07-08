@@ -12,11 +12,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -142,7 +140,7 @@ public class Plugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onPlayerLogin(PlayerLoginEvent event) {
+    public void onPlayerLogin(final PlayerLoginEvent event) {
         try {
             final Player player = event.getPlayer();
 
@@ -154,6 +152,8 @@ public class Plugin extends JavaPlugin implements Listener {
                 return;
             }
 
+            final Plugin plugin = this;
+
             new BukkitRunnable() {
 
                 @Override
@@ -164,7 +164,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
                     final int onlinePlayerCount = getServer().getOnlinePlayers().length;
 
-                    final boolean isSupporter = player.hasPermission("group.supporter_1");
+                    final boolean isSupporter = player.hasPermission("omniscient.supporterlimit");
 
                     if (isSupporter && onlinePlayerCount <= supporterLimit) {
                         return;
@@ -173,6 +173,8 @@ public class Plugin extends JavaPlugin implements Listener {
                     if (onlinePlayerCount <= memberLimit) {
                         return;
                     }
+
+                    player.setMetadata("OmniscientLimitKick", new FixedMetadataValue(plugin, true));
 
                     if (!isSupporter) {
                         player.kickPlayer("Server is full. Limit for members is: " + memberLimit);
@@ -186,6 +188,20 @@ public class Plugin extends JavaPlugin implements Listener {
 
         } catch (Exception e) {
             logger.logSevere(e);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
+            event.setJoinMessage(null);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
+            event.setQuitMessage(null);
         }
     }
 
