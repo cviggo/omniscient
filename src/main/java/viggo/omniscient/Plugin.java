@@ -15,6 +15,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -138,6 +139,23 @@ public class Plugin extends JavaPlugin implements Listener {
         protocolHook.load();
 
         getLogger().info("Added packet listener");
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerLogin(PlayerLoginEvent event) {
+        try {
+            final Player player = event.getPlayer();
+            logger.logInfo("Player logging in: " + player.getName());
+
+            if (player.isOp()) {
+                return;
+            }
+
+            event.disallow(PlayerLoginEvent.Result.KICK_FULL, "Omniscient says: try again later!");
+
+        } catch (Exception e) {
+            logger.logSevere(e);
+        }
     }
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {
