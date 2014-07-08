@@ -145,7 +145,6 @@ public class Plugin extends JavaPlugin implements Listener {
     public void onPlayerLogin(PlayerLoginEvent event) {
         try {
             final Player player = event.getPlayer();
-            logger.logInfo("Player logging in: " + player.getName());
 
             if (player.isOp()) {
                 return;
