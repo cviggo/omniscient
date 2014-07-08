@@ -208,9 +208,20 @@ public class Plugin extends JavaPlugin implements Listener {
         event.setJoinMessage(null);
     }
 
-    @EventHandler(priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerQuit(PlayerQuitEvent event) {
         logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
+        if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
+            logger.logInfo("setting quit message");
+            event.setQuitMessage(null);
+        }
+
+        event.setQuitMessage(null);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onPlayerQuit2(PlayerQuitEvent event) {
+        logger.logInfo("onPlayerQuit2: " + event.getPlayer().getName());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             logger.logInfo("setting quit message");
             event.setQuitMessage(null);
@@ -1401,12 +1412,13 @@ public class Plugin extends JavaPlugin implements Listener {
             }
 
             final Date end = new Date();
-            logger.logInfo(String.format(
-                    "Omniscient synchronized %d player blocks in a total of %d msec",
-                    totalBlocksSynced,
-                    (end.getTime() - begin.getTime())
-            ));
-
+            if (settings.doLogOnSyncCompleted) {
+                logger.logInfo(String.format(
+                        "Omniscient synchronized %d player blocks in a total of %d msec",
+                        totalBlocksSynced,
+                        (end.getTime() - begin.getTime())
+                ));
+            }
 
             state = PluginState.Running;
             return true;

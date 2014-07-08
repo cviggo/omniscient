@@ -47,9 +47,10 @@ public class Settings implements Serializable {
     public boolean broadcastOnSoundDisablingEnabled;
     public int onlinePlayersLimitMembers;
     public int onlinePlayersLimitSupporters;
+    public boolean doLogOnScanningCompleted;
+    public boolean doLogOnSyncCompleted;
 
     private Plugin plugin;
-
 
     public Settings(Plugin plugin) throws Exception {
 
@@ -133,6 +134,9 @@ public class Settings implements Serializable {
 
         this.onlinePlayersLimitMembers = getInt("onlinePlayersLimitMembers");
         this.onlinePlayersLimitSupporters = getInt("onlinePlayersLimitSupporters");
+
+        this.doLogOnScanningCompleted = getBoolean("doLogOnScanningCompleted");
+        this.doLogOnSyncCompleted = getBoolean("doLogOnSyncCompleted");
     }
 
     private void verifyKeysPresent() throws Exception {

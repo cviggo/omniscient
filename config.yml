@@ -90,5 +90,8 @@ blockIdEventBlackList: 0
 # should always be false - if value is true omniscient may remove all unknown limited blocks from the world.
 doAllowEmptyBlockInfo: false
 
+doLogOnScanningCompleted: false
+doLogOnSyncCompleted: false
+
 # sends messages to a given player if errors are detected. makes little sense to use unless your developing the mod.
 devUser: unlessYourMeJustLeaveThisAlone

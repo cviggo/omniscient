@@ -149,9 +149,10 @@ public class WorldScannerEngine implements Runnable {
                     final Date now = new Date();
                     final long elapsedMsecs = now.getTime() - begin.getTime();
 
-                    plugin.logger.logInfo(String.format("Scanned %d blocks in %d msecs (%f blocks / sec). Found %d unknown blocks",
-
-                            processedBlocks, elapsedMsecs, (double) processedBlocks / ((double) elapsedMsecs / 1000.0), unknownBlocksFound.size()));
+                    if (plugin.settings.doLogOnScanningCompleted) {
+                        plugin.logger.logInfo(String.format("Scanned %d blocks in %d msecs (%f blocks / sec). Found %d unknown blocks",
+                                processedBlocks, elapsedMsecs, (double) processedBlocks / ((double) elapsedMsecs / 1000.0), unknownBlocksFound.size()));
+                    }
 
 
                     final boolean unknownBlocksSubmissionSuccess = plugin.setUnknowBlocksToBeProcessed(unknownBlocksFound);
