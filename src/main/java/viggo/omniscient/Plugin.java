@@ -210,7 +210,12 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        //logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
+
+        logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
+
+        getServer().dispatchCommand(event.getPlayer(), "invsql save");
+
+
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             //logger.logInfo("setting quit message");
             event.setQuitMessage(null);
@@ -224,6 +229,11 @@ public class Plugin extends JavaPlugin implements Listener {
             //logger.logInfo("setting quit message");
             event.setQuitMessage(null);
         }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerPreCommand(PlayerCommandPreprocessEvent event) {
+        logger.logInfo("onPlayerPreCommand: " + event.getPlayer().getName() + " executing: " + event.getMessage());
     }
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {
