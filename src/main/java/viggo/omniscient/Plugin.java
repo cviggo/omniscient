@@ -233,7 +233,18 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerPreCommand(PlayerCommandPreprocessEvent event) {
-        logger.logInfo("onPlayerPreCommand: " + event.getPlayer().getName() + " executing: " + event.getMessage());
+//        logger.logInfo("onPlayerPreCommand: " + event.getPlayer().getName() + " executing: " + event.getMessage());
+//
+//        if ("/lolcake".equals(event.getMessage())){
+//            getServer().dispatchCommand(event.getPlayer(), "invsql save");
+//            //getServer().dispatchCommand(getServer().getConsoleSender(), "send " + event.getPlayer().getName() + " south");
+//            event.setCancelled(false);
+//            event.setMessage("ok");
+//        }
+//
+//        if ("/spawn".equals(event.getMessage())){
+//            event.setCancelled(true);
+//        }
     }
 
     private void startNotifyScheduler(int notificationIntervalSeconds) {

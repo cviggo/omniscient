@@ -113,7 +113,7 @@ public class WorldScannerEngine implements Runnable {
                                     continue;
                                 }
 
-                                if (blockLimits.containsKey(blockId) || blockLimits.containsKey(blockIdRange)) {
+                                if (blockLimit != null || blockLimitRange != null) {
 
 //                                    plugin.logInfo(
 //                                            String.format("Found a limited block (%s) at: %d, %d, %d.",
@@ -133,7 +133,11 @@ public class WorldScannerEngine implements Runnable {
                                     );
 
                                     final String blockKeyFromInfo = plugin.getBlockKeyFromInfo(blockInfo);
-                                    if (!plugin.playerToBlockCoordsMap.containsKey(blockKeyFromInfo)) {
+                                    if (
+                                            !plugin.playerToBlockCoordsMap.containsKey(blockKeyFromInfo)
+                                                    || (blockLimit != null && blockLimit.limit == -9)
+                                                    || (blockLimitRange != null && blockLimitRange.limit == -9)
+                                            ) {
                                         unknownBlocksFound.add(blockInfo);
                                     }
                                 }
