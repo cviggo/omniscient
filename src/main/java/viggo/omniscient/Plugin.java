@@ -945,7 +945,7 @@ public class Plugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
-        if (this.getState() != PluginState.Running) {
+        if (this.getState() != PluginState.Running || worldScannerEngine == null) {
             return;
         }
 
