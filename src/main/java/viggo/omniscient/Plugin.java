@@ -1,5 +1,7 @@
 package viggo.omniscient;
 
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -17,6 +19,7 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -29,7 +32,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("deprecation")
-public class Plugin extends JavaPlugin implements Listener {
+public class Plugin extends JavaPlugin implements Listener, PluginMessageListener {
 
     private static final Integer WAIT_FOR_ENGINE_TO_STOP_TIMEOUT_MSECS = 100;
     private static int TICKS_PER_SECOND = 20;
@@ -102,6 +105,9 @@ public class Plugin extends JavaPlugin implements Listener {
 
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(this, this);
+
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+        getServer().getMessenger().registerIncomingPluginChannel(this, "BungeeCord", this);
 
         // reload synchronously
         setState(PluginState.Reloading);
@@ -213,8 +219,14 @@ public class Plugin extends JavaPlugin implements Listener {
 
         logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
 
-        getServer().dispatchCommand(event.getPlayer(), "invsql save");
 
+        try {
+            logger.logInfo("saving player");
+            Thread.sleep(1000);
+            logger.logInfo("done saving player");
+        } catch (InterruptedException e) {
+            logger.logSevere(e.toString());
+        }
 
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             //logger.logInfo("setting quit message");
@@ -1626,6 +1638,32 @@ public class Plugin extends JavaPlugin implements Listener {
 
     public boolean hasUnknownBlocksQueued() {
         return unknownBlocksFound.size() > 0;
+    }
+
+    @Override
+    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
+
+        if (!channel.equals("BungeeCord")) {
+            return;
+        }
+
+        ByteArrayDataInput in = ByteStreams.newDataInput(message);
+
+        String subChannel = in.readUTF();
+
+        if ("BungeeNox".equals(subChannel)) {
+
+            // Use the code sample in the 'Response' sections below to read
+            // the data.
+            final String command = in.readUTF();
+            final String arg1 = in.readUTF();
+
+            if ("SavePlayer".equals(command)) {
+                logger.logInfo("saving player: " + arg1);
+                getServer().dispatchCommand(getServer().getConsoleSender(), "invSQL save " + arg1);
+
+            }
+        }
     }
 }
 
