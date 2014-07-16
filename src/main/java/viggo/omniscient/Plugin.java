@@ -2,6 +2,7 @@ package viggo.omniscient;
 
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
+import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -1660,7 +1661,44 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
             if ("SavePlayer".equals(command)) {
                 logger.logInfo("saving player: " + arg1);
-                getServer().dispatchCommand(getServer().getConsoleSender(), "invSQL save " + arg1);
+                //getServer().dispatchCommand(getServer().getConsoleSender(), "invSQL save " + arg1);
+
+                // save data on this local server
+                player.saveData();
+
+
+                final String playerFileName = player.getName() + ".dat";
+
+                final File file = new File(getServer().getWorldContainer().getAbsolutePath().replace("./", "") + "/players/" + playerFileName);
+
+                if (file != null && file.exists()) {
+                    logger.logInfo("player data found after save. Total size: " + file.length() + " bytes");
+
+                    final String[] serverFolderNames = {"tppi-test", "tppi-test-south"};
+
+                    try {
+
+                        for (String serverFolderName : serverFolderNames) {
+                            final File destinationFile = new File("/home/mc/" + serverFolderName + "/world/players/" + playerFileName);
+
+                            if (file.compareTo(destinationFile) != 0) {
+                                logger.logInfo("saving player file data: " + destinationFile.getAbsolutePath());
+                                FileUtils.copyFile(file, destinationFile);
+                            }
+                        }
+
+                        logger.logInfo("saved file to all servers");
+
+
+                    } catch (Throwable t) {
+                        logger.logSevere(t);
+                    }
+
+
+                }
+
+
+
 
             }
         }
