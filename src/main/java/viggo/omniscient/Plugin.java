@@ -1674,7 +1674,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                 if (file != null && file.exists()) {
                     logger.logInfo("player data found after save. Total size: " + file.length() + " bytes");
 
-                    final String[] serverFolderNames = {"tppi-test", "tppi-test-south"};
+                    final String[] serverFolderNames = {"tppi-gliese", "tppi-helios", "tppi-sectorz", "tppi-sigmus", "tppi-resource"};
 
                     try {
 
@@ -1688,7 +1688,6 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                         }
 
                         logger.logInfo("saved file to all servers");
-
 
                     } catch (Throwable t) {
                         logger.logSevere(t);
