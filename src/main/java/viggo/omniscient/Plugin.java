@@ -64,6 +64,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
     private ProtocolHook protocolHook;
     private Date lastBroadcast = new Date();
     private ConcurrentHashMap<String, Object> _limitKickedPlayers;
+    private BukkitTask saveAllPlayersSchedule;
 
     public void onDisable() {
         logger.logInfo("Disable invoked. Stopping engines.");
@@ -221,13 +222,13 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
         logger.logInfo("onPlayerQuit: " + event.getPlayer().getName());
 
 
-        try {
-            logger.logInfo("saving player");
-            Thread.sleep(1000);
-            logger.logInfo("done saving player");
-        } catch (InterruptedException e) {
-            logger.logSevere(e.toString());
-        }
+//        try {
+//            logger.logInfo("saving player");
+//            Thread.sleep(1000);
+//            logger.logInfo("done saving player");
+//        } catch (InterruptedException e) {
+//            logger.logSevere(e.toString());
+//        }
 
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             //logger.logInfo("setting quit message");
@@ -640,6 +641,22 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
         }.runTaskTimer(this, TICKS_PER_SECOND * 10, 1);
     }
 
+    private BukkitTask createSaveAllPlayersSchedule() {
+        return new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                try {
+                    saveAllOnlinePlayers();
+
+                } catch (Throwable t) {
+                    logger.logSevere(t);
+                }
+            }
+
+        }.runTaskTimer(this, TICKS_PER_SECOND * 30, 1);
+    }
+
     public String getBlockKeyFromInfo(BlockInfo blockInfo) {
         return String.format("%s:%d.%d.%d", blockInfo.world, blockInfo.x, blockInfo.y, blockInfo.z);
     }
@@ -655,6 +672,10 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                 tickSchedule.cancel();
             }
 
+            if (saveAllPlayersSchedule != null) {
+                logger.logInfo("stopping save all players scheduler...");
+                saveAllPlayersSchedule.cancel();
+            }
 
             if (syncSchedule != null) {
                 logger.logInfo("stopping sync scheduler...");
@@ -752,15 +773,18 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
             if (settings.scanChunksPeriodicallyEnabled) {
             /* queue all loaded chunks for scanning */
+
                 worldScanSchedule = createWorldScannerSchedule();
             }
 
             if (settings.syncRemovedBlocksPeriodicallyEnabled) {
+
                 syncSchedule = createSyncSchedule(10, settings.syncRemovedBlocksPeriodicallyIntervalSeconds);
             }
 
             tickSchedule = createTickSchedule();
 
+            saveAllPlayersSchedule = createSaveAllPlayersSchedule();
 
             return true;
 
@@ -1657,50 +1681,56 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             // Use the code sample in the 'Response' sections below to read
             // the data.
             final String command = in.readUTF();
-            final String arg1 = in.readUTF();
+            //final String arg1 = in.readUTF();
 
             if ("SavePlayer".equals(command)) {
-                logger.logInfo("saving player: " + arg1);
-                //getServer().dispatchCommand(getServer().getConsoleSender(), "invSQL save " + arg1);
+                savePlayer(player);
+            }
+        }
+    }
 
-                // save data on this local server
-                player.saveData();
+    public void saveAllOnlinePlayers() {
+        final Player[] onlinePlayers = getServer().getOnlinePlayers();
+        if (onlinePlayers == null) {
+            return;
+        }
+        for (Player onlinePlayer : onlinePlayers) {
+            savePlayer(onlinePlayer);
+        }
+    }
 
+    public void savePlayer(Player player) {
+        logger.logInfo("saving player: " + player.getName());
 
-                final String playerFileName = player.getName() + ".dat";
+        // save data on this local server
+        player.saveData();
 
-                final File file = new File(getServer().getWorldContainer().getAbsolutePath().replace("./", "") + "/players/" + playerFileName);
+        final String playerFileName = player.getName() + ".dat";
 
-                if (file != null && file.exists()) {
-                    logger.logInfo("player data found after save. Total size: " + file.length() + " bytes");
+        final File file = new File(getServer().getWorldContainer().getAbsolutePath().replace("./", "") + "/players/" + playerFileName);
 
-                    final String[] serverFolderNames = {"tppi-gliese", "tppi-helios", "tppi-sectorz", "tppi-sigmus", "tppi-resource", "tppi-hub"};
+        if (file != null && file.exists()) {
+            logger.logInfo("player data found after save. Total size: " + file.length() + " bytes");
 
-                    try {
+            final String[] serverFolderNames = {"tppi-gliese", "tppi-helios", "tppi-sectorz", "tppi-sigmus", "tppi-resource", "tppi-hub"};
 
-                        for (String serverFolderName : serverFolderNames) {
-                            final File destinationFile = new File("/home/mc/" + serverFolderName + "/world/players/" + playerFileName);
+            try {
 
-                            if (file.compareTo(destinationFile) != 0) {
-                                logger.logInfo("saving player file data: " + destinationFile.getAbsolutePath());
-                                FileUtils.copyFile(file, destinationFile);
-                            }
-                        }
+                for (String serverFolderName : serverFolderNames) {
+                    final File destinationFile = new File("/home/mc/" + serverFolderName + "/world/players/" + playerFileName);
 
-
-                        logger.logInfo("saved file to all servers");
-
-                    } catch (Throwable t) {
-                        logger.logSevere(t);
+                    if (file.compareTo(destinationFile) != 0) {
+                        logger.logInfo("saving player file data: " + destinationFile.getAbsolutePath());
+                        FileUtils.copyFile(file, destinationFile);
                     }
-
-
                 }
 
+                logger.logInfo("saved file to all servers");
 
-
-
+            } catch (Throwable t) {
+                logger.logSevere(t);
             }
+
         }
     }
 }
