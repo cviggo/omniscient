@@ -1,8 +1,8 @@
-omniscient
-==========
+Omniscient
+============
 
-omniscient plugin for Minecraft
+Omniscient plugin for Minecraft
 
-Omniscient is a plugin that tracks the amount of blocks of specified types placed my a player, and preventing them from placing more than a particular number of one block.
+Omniscient is a plugin that tracks specific player placed blocks, and prevents them from placing more than the allowed amount of them.
 
-It also whitelists for a few minutes during startup to prevent players from swarming the server and crashing it.
+It also has other features such as removing a server whitelist after a specified amount of time and disable the global wither spawn and ender dragon death noises.
