@@ -732,6 +732,19 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
                 return true;
             }
 
+            if (isCommand(args, r, "sudoall")) {
+                String command = "";
+                for (String remainingCommand : r.remainingCommands) {
+                    command += remainingCommand + " ";
+                }
+
+                sender.sendMessage(command);
+
+                sender.getServer().dispatchCommand(sender, command);
+
+                return true;
+            }
+
 //            if (isCommand(args, r, "istat")) {
 //                final Player player = (Player) sender;
 //                final ItemStack itemInHand = player.getItemInHand();

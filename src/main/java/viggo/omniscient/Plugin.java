@@ -207,6 +207,14 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerJoin(PlayerJoinEvent event) {
 
+        final Player player = event.getPlayer();
+
+        if (player != null) {
+            //player.performCommand("join global");
+            logger.logInfo("joining global channel for player: " + player.getName());
+            getServer().dispatchCommand(player, "join global");
+        }
+
         //logger.logInfo("onPlayerJoin: " + event.getPlayer().getName() + ", " + _limitKickedPlayers.size());
         if (event.getPlayer().hasMetadata("OmniscientLimitKick")) {
             //logger.logInfo("setting join message");
@@ -654,7 +662,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                 }
             }
 
-        }.runTaskTimer(this, TICKS_PER_SECOND * 30, 1);
+        }.runTaskTimer(this, TICKS_PER_SECOND * 300, 1);
     }
 
     public String getBlockKeyFromInfo(BlockInfo blockInfo) {
@@ -784,7 +792,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
             tickSchedule = createTickSchedule();
 
-            saveAllPlayersSchedule = createSaveAllPlayersSchedule();
+            //saveAllPlayersSchedule = createSaveAllPlayersSchedule();
 
             return true;
 
@@ -1684,12 +1692,15 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             //final String arg1 = in.readUTF();
 
             if ("SavePlayer".equals(command)) {
-                savePlayer(player);
+                //savePlayer(player);
             }
         }
     }
 
     public void saveAllOnlinePlayers() {
+        if (true)
+            return;
+
         final Player[] onlinePlayers = getServer().getOnlinePlayers();
         if (onlinePlayers == null) {
             return;
@@ -1701,6 +1712,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
     public void savePlayer(Player player) {
         logger.logInfo("saving player: " + player.getName());
+
 
         // save data on this local server
         player.saveData();
