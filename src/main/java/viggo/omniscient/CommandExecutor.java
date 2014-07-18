@@ -9,8 +9,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.reflections.Reflections;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -744,6 +747,22 @@ public class CommandExecutor implements org.bukkit.command.CommandExecutor {
 
                 return true;
             }
+
+            if (isCommand(args, r, "uptime")) {
+                RuntimeMXBean rb = ManagementFactory.getRuntimeMXBean();
+                long uptime = rb.getUptime();
+                final String uptimeStr = String.format("%dh %dm %ds",
+                        TimeUnit.MILLISECONDS.toHours(uptime),
+                        TimeUnit.MILLISECONDS.toMinutes(uptime) -
+                                TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(uptime)),
+                        TimeUnit.MILLISECONDS.toSeconds(uptime) -
+                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(uptime))
+                );
+
+                sender.sendMessage("Uptime: " + uptimeStr);
+                return true;
+            }
+
 
 //            if (isCommand(args, r, "istat")) {
 //                final Player player = (Player) sender;

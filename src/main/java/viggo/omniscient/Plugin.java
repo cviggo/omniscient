@@ -27,9 +27,12 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("deprecation")
@@ -627,6 +630,18 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             @Override
             public void run() {
                 try {
+
+                    RuntimeMXBean rb = ManagementFactory.getRuntimeMXBean();
+                    long uptime = rb.getUptime();
+                    final long minutes = TimeUnit.MILLISECONDS.toMinutes(uptime);
+
+                    final int maxUptimeMinutes = 180;
+
+                    if (minutes >= maxUptimeMinutes) {
+                        getServer().broadcastMessage("Automated server restart imminent.");
+                        getServer().setWhitelist(true);
+                        getServer().shutdown();
+                    }
 
                     processUnknownBlocks();
 
@@ -1510,6 +1525,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
             event.setCancelled(true);
 
+
             return;
         }
 
@@ -1692,7 +1708,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             //final String arg1 = in.readUTF();
 
             if ("SavePlayer".equals(command)) {
-                //savePlayer(player);
+                savePlayer(player);
             }
         }
     }
