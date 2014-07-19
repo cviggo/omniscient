@@ -639,6 +639,9 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
                     if (minutes >= maxUptimeMinutes) {
                         getServer().broadcastMessage("Automated server restart imminent.");
+
+                        saveAllOnlinePlayers();
+
                         getServer().setWhitelist(true);
                         getServer().shutdown();
                     }
@@ -670,7 +673,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             @Override
             public void run() {
                 try {
-                    saveAllOnlinePlayers();
+                    //saveAllOnlinePlayers();
 
                 } catch (Throwable t) {
                     logger.logSevere(t);
@@ -1714,9 +1717,6 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
     }
 
     public void saveAllOnlinePlayers() {
-        if (true)
-            return;
-
         final Player[] onlinePlayers = getServer().getOnlinePlayers();
         if (onlinePlayers == null) {
             return;
