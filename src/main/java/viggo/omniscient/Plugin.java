@@ -635,7 +635,9 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                     long uptime = rb.getUptime();
                     final long minutes = TimeUnit.MILLISECONDS.toMinutes(uptime);
 
-                    final int maxUptimeMinutes = 180;
+                    final int maxUptimeMinutes = 720;
+
+                    //logger.logInfo(maxUptimeMinutes - minutes + " minutes before restart. " + this.getTaskId());
 
                     if (minutes >= maxUptimeMinutes) {
                         getServer().broadcastMessage("Automated server restart imminent.");
