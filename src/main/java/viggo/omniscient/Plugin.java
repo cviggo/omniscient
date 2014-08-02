@@ -675,14 +675,14 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             @Override
             public void run() {
                 try {
-                    //saveAllOnlinePlayers();
+                    saveAllOnlinePlayers();
 
                 } catch (Throwable t) {
                     logger.logSevere(t);
                 }
             }
 
-        }.runTaskTimer(this, TICKS_PER_SECOND * 300, 1);
+        }.runTaskTimer(this, TICKS_PER_SECOND * 60 /* start after 1 minute */, TICKS_PER_SECOND * 300 /* run each 5 minutes */);
     }
 
     public String getBlockKeyFromInfo(BlockInfo blockInfo) {
@@ -812,7 +812,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
             tickSchedule = createTickSchedule();
 
-            //saveAllPlayersSchedule = createSaveAllPlayersSchedule();
+            saveAllPlayersSchedule = createSaveAllPlayersSchedule();
 
             return true;
 
