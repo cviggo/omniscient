@@ -59,6 +59,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
     Map<String, BlockStat> blockStats;
     private Map<String, BlockLimitGroup> blockLimitGroups;
     private ConcurrentLinkedQueue<BlockInfo> unknownBlocksFound;
+    private ConcurrentLinkedQueue<InteractedBlock> interactedBlocks;
     private BukkitTask worldScanSchedule;
     private BukkitTask syncSchedule;
     private Set<String> debugPlayers;
@@ -648,6 +649,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                         getServer().shutdown();
                     }
 
+                    processInteractedBlocks();
                     processUnknownBlocks();
 
                     // HACK: broadcast once every 5 secs at most
@@ -667,6 +669,38 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             }
 
         }.runTaskTimer(this, TICKS_PER_SECOND * 10, 1);
+    }
+
+    private void processInteractedBlocks() {
+        try {
+            if (interactedBlocks != null) {
+                while (interactedBlocks.size() > 0) {
+                    final InteractedBlock interactedBlock = interactedBlocks.poll();
+                    final BlockInfo blockInfo = interactedBlock.blockInfo;
+
+                    if (blockInfo != null) {
+
+                        // is the block limited ?
+                        if (!blockLimits.containsKey(blockInfo.blockId)) {
+                            continue;
+                        }
+
+                        World world = getServer().getWorld(blockInfo.world);
+
+                        Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
+                        String blockId = getBlockIdFromBlock(block);
+
+                        // has it been removed without an event ?
+                        if (block.getType() == Material.AIR) {
+                            processLimitedBlockRemoval(block, blockId, world.getName(), interactedBlock.player);
+                        }
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            logger.logSevere(t);
+
+        }
     }
 
     private BukkitTask createSaveAllPlayersSchedule() {
@@ -769,6 +803,7 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
         try {
 
             unknownBlocksFound = new ConcurrentLinkedQueue<BlockInfo>();
+            interactedBlocks = new ConcurrentLinkedQueue<InteractedBlock>();
             unknownBlocksProcessingState.set(0);
             debugPlayers = new HashSet<String>();
             broadcastQueue = new ConcurrentLinkedQueue<String>();
@@ -909,19 +944,9 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
             }
 
             // HACK: ignore events for non-ops
-            if (!event.getPlayer().isOp()) {
-                return;
-            }
-
-            // TODO: include damage / sub value
-            if (!settings.interactionToolEnabled ||
-
-                    (event.getPlayer().getItemInHand().getTypeId() != settings.interactionToolItemId
-                            && event.getPlayer().getItemInHand().getTypeId() != 290 // wooden hoe
-
-                    )) {
-                return;
-            }
+//            if (!event.getPlayer().isOp()) {
+//                return;
+//            }
 
             final Block clickedBlock = event.getClickedBlock();
 
@@ -934,6 +959,21 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
             BlockInfo blockInfo = new BlockInfo(0, blockIdFromBlock, clickedBlock.getWorld().getName(),
                     clickedBlock.getX(), clickedBlock.getY(), clickedBlock.getZ(), null, null);
+
+
+            // investigate block next tick
+            interactedBlocks.add(new InteractedBlock(blockInfo, event.getPlayer()));
+
+            // TODO: include damage / sub value
+            if (!settings.interactionToolEnabled ||
+
+                    (event.getPlayer().getItemInHand().getTypeId() != settings.interactionToolItemId
+                            && event.getPlayer().getItemInHand().getTypeId() != 290 // wooden hoe
+
+                    )) {
+                return;
+            }
+
 
             String blockKey = getBlockKeyFromInfo(blockInfo);
 
@@ -1761,6 +1801,16 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                 logger.logSevere(t);
             }
 
+        }
+    }
+
+    class InteractedBlock {
+        Player player;
+        BlockInfo blockInfo;
+
+        public InteractedBlock(BlockInfo blockInfo, Player player) {
+            this.blockInfo = blockInfo;
+            this.player = player;
         }
     }
 }
