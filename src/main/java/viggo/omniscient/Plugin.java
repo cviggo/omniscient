@@ -636,9 +636,17 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
                     long uptime = rb.getUptime();
                     final long minutes = TimeUnit.MILLISECONDS.toMinutes(uptime);
 
+
                     final int maxUptimeMinutes = 720;
+                    final int uptimeBeforeWarningMinutes = maxUptimeMinutes - 5;
 
                     //logger.logInfo(maxUptimeMinutes - minutes + " minutes before restart. " + this.getTaskId());
+
+                    if (minutes > uptimeBeforeWarningMinutes) {
+                        if (TimeUnit.MILLISECONDS.toSeconds(uptime) % 60 == 0) {
+                            getServer().broadcastMessage(String.format("Automated server restart in %d minute(s)", maxUptimeMinutes - minutes));
+                        }
+                    }
 
                     if (minutes >= maxUptimeMinutes) {
                         getServer().broadcastMessage("Automated server restart imminent.");
@@ -689,10 +697,14 @@ public class Plugin extends JavaPlugin implements Listener, PluginMessageListene
 
                         Block block = world.getBlockAt(blockInfo.x, blockInfo.y, blockInfo.z);
                         String blockId = getBlockIdFromBlock(block);
+                        final String blockKeyFromInfo = getBlockKeyFromInfo(blockInfo);
 
                         // has it been removed without an event ?
                         if (block.getType() == Material.AIR) {
+                            //logger.logInfo("Processing limited block removal due to interaction event: " + blockKeyFromInfo);
                             processLimitedBlockRemoval(block, blockId, world.getName(), interactedBlock.player);
+                        } else {
+                            //logger.logInfo("Limited block was not removed due to interaction event: " + blockKeyFromInfo);
                         }
                     }
                 }
